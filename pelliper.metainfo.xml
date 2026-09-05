@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>pelliper</id>
+  <name>Pelliper</name>
+  <summary>Privacy-first email client</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <description>
+    <p>
+      Pelliper is a privacy-first email client built with KDE Kirigami.
+      It supports IMAP/SMTP with automatic account discovery, OAuth authentication,
+      and local caching for offline access.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>IMAP/SMTP support with automatic server discovery</li>
+      <li>OAuth authentication for Google, Microsoft, and other providers</li>
+      <li>Local SQLite cache for offline access</li>
+      <li>Privacy-first: remote content blocked by default</li>
+      <li>SPF/DKIM/DMARC verification</li>
+      <li>System tray integration</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">pelliper.desktop</launchable>
+  <provides>
+    <binary>pelliper</binary>
+  </provides>
+  <content_rating type="oars-1.1">
+    <content_attribute id="violence-fantasy-none">none</content_attribute>
+    <content_attribute id="violence-realistic-none">none</content_attribute>
+    <content_attribute id="violence-graphic-none">none</content_attribute>
+    <content_attribute id="violence-gore-none">none</content_attribute>
+    <content_attribute id="violence-death-none">none</content_attribute>
+    <content_attribute id="violence-sexual-none">none</content_attribute>
+    <content_attribute id="violence-damage-none">none</content_attribute>
+    <content_attribute id="drugs-alcohol-none">none</content_attribute>
+    <content_attribute id="drugs-narcotics-none">none</content_attribute>
+    <content_attribute id="drugs-tobacco-none">none</content_attribute>
+    <content_attribute id="drugs-alcohol-tobacco-none">none</content_attribute>
+    <content_attribute id="sex-nudity-none">none</content_attribute>
+    <content_attribute id="sex-themes-none">none</content_attribute>
+    <content_attribute id="sex-homosexuality-none">none</content_attribute>
+    <content_attribute id="sex-prostitution-none">none</content_attribute>
+    <content_attribute id="sex-adultery-none">none</content_attribute>
+    <content_attribute id="sex-appearance-none">none</content_attribute>
+    <content_attribute id="language-profanity-none">none</content_attribute>
+    <content_attribute id="language-discrimination-none">none</content_attribute>
+    <content_attribute id="language-sexism-none">none</content_attribute>
+    <content_attribute id="money-gambling-none">none</content_attribute>
+    <content_attribute id="social-chat-none">none</content_attribute>
+    <content_attribute id="social-contacts-none">none</content_attribute>
+    <content_attribute id="social-info-none">none</content_attribute>
+    <content_attribute id="social-audio-none">none</content_attribute>
+    <content_attribute id="social-location-none">none</content_attribute>
+    <content_attribute id="social-ftp-none">none</content_attribute>
+    <content_attribute id="social-news-none">none</content_attribute>
+    <content_attribute id="social-networking-none">none</content_attribute>
+  </content_rating>
+</component>

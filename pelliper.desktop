@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Pelliper
+GenericName=Email Client
+Comment=Privacy-first email client
+Exec=pelliper
+Icon=pelliper
+Terminal=false
+Categories=Qt;Network;Email;
+MimeType=x-scheme-handler/mailto;
+StartupNotify=true
