@@ -27,6 +27,7 @@ target_link_libraries(pelliper
     Qt6::Widgets
     Qt6::DBus
     KF6::I18n
+    KF6::I18nQml
     KF6::CoreAddons
     KF6::IconThemes
 )
