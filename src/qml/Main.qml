@@ -13,6 +13,12 @@ Kirigami.ApplicationWindow {
 
     title: "Pelliper"
 
+
+    Component {
+        id: settingsPageComponent
+        SettingsPage {}
+    }
+
     Component {
         id: emptyStateComponent
         Kirigami.Page {
@@ -54,10 +60,8 @@ Kirigami.ApplicationWindow {
     Connections {
         target: Pelliper.DaemonClient
         function onAccountAdded(email) {
-            // Refresh the model and switch to three-pane
             Pelliper.AccountModel.refresh()
             if (Pelliper.AccountModel.count > 0) {
-                // Replace the current page with three-pane view
                 root.pageStack.clear()
                 root.pageStack.push(mainWindowComponent)
             }

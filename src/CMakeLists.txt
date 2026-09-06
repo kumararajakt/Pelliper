@@ -35,6 +35,7 @@ ecm_target_qml_sources(pelliper
     qml/FolderSidebar.qml
     qml/MessageListView.qml
     qml/MessageView.qml
+    qml/SettingsPage.qml
 )
 
 target_link_libraries(pelliper
