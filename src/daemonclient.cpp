@@ -200,6 +200,25 @@ void DaemonClient::loadBody(qint64 accountId, const QString &folderPath, qint64 
     });
 }
 
+void DaemonClient::removeAccount(qint64 accountId)
+{
+    if (!m_available) return;
+
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        SERVICE, PATH, INTERFACE, QStringLiteral("RemoveAccount"));
+    msg.setArguments({QVariant::fromValue(accountId)});
+
+    QDBusPendingCall call = QDBusConnection::sessionBus().asyncCall(msg);
+    auto *watcher = new QDBusPendingCallWatcher(call, this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, accountId]() {
+        QDBusPendingReply<bool> reply = *watcher;
+        watcher->deleteLater();
+        if (!reply.isError() && reply.value()) {
+            Q_EMIT accountRemoved(accountId);
+        }
+    });
+}
+
 void DaemonClient::onGenericReply(QDBusPendingCallWatcher *watcher, const QString &signal)
 {
     QDBusPendingReply<QString> reply = *watcher;
