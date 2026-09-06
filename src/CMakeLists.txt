@@ -16,14 +16,19 @@ target_sources(pelliper
     oauth.h
     daemonclient.cpp
     daemonclient.h
+    accountmodel.cpp
+    accountmodel.h
 )
 
 ecm_target_qml_sources(pelliper
     SOURCES
     qml/Main.qml
-    qml/ThreePaneView.qml
+    qml/MainWindow.qml
     qml/AddAccountPage.qml
     qml/ComposePage.qml
+    qml/FolderSidebar.qml
+    qml/MessageListView.qml
+    qml/MessageView.qml
 )
 
 target_link_libraries(pelliper
@@ -35,6 +40,7 @@ target_link_libraries(pelliper
     Qt6::Widgets
     Qt6::DBus
     Qt6::Network
+    Qt6::Sql
     KF6::I18n
     KF6::I18nQml
     KF6::CoreAddons

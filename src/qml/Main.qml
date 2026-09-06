@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.pelliper as Pelliper
 
 Kirigami.ApplicationWindow {
     id: root
@@ -18,11 +19,12 @@ Kirigami.ApplicationWindow {
             title: "Pelliper"
             ColumnLayout {
                 anchors.centerIn: parent
+                spacing: Kirigami.Units.largeSpacing
+
                 Controls.Button {
                     text: "Add Account"
                     icon.name: "list-add-user"
                     Layout.alignment: Qt.AlignHCenter
-                    Layout.topMargin: Kirigami.Units.largeSpacing
                     onClicked: root.pageStack.layers.push(addAccountComponent)
                 }
             }
@@ -30,8 +32,8 @@ Kirigami.ApplicationWindow {
     }
 
     Component {
-        id: threePaneComponent
-        ThreePaneView {}
+        id: mainWindowComponent
+        MainWindow {}
     }
 
     Component {
@@ -39,8 +41,26 @@ Kirigami.ApplicationWindow {
         AddAccountPage {}
     }
 
+    readonly property var accountModel: Pelliper.AccountModel
+
     Component.onCompleted: {
-        // TODO: Check if accounts exist via D-Bus
-        root.pageStack.push(emptyStateComponent)
+        if (Pelliper.AccountModel.count > 0) {
+            root.pageStack.push(mainWindowComponent)
+        } else {
+            root.pageStack.push(emptyStateComponent)
+        }
+    }
+
+    Connections {
+        target: Pelliper.DaemonClient
+        function onAccountAdded(email) {
+            // Refresh the model and switch to three-pane
+            Pelliper.AccountModel.refresh()
+            if (Pelliper.AccountModel.count > 0) {
+                // Replace the current page with three-pane view
+                root.pageStack.clear()
+                root.pageStack.push(mainWindowComponent)
+            }
+        }
     }
 }
