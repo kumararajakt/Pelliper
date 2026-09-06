@@ -24,6 +24,8 @@ target_sources(pelliper
     foldermodel.h
     messagemodel.cpp
     messagemodel.h
+    threadmodel.cpp
+    threadmodel.h
 )
 
 ecm_target_qml_sources(pelliper

@@ -69,6 +69,8 @@ QVariant MessageModel::data(const QModelIndex &index, int role) const
     case IsStarredRole:       return msg.isStarred;
     case HasAttachmentsRole:  return msg.hasAttachments;
     case PreviewRole:         return msg.preview;
+    case MessageIdRole:       return msg.messageId;
+    case ReferencesRole:      return msg.references;
     }
     return {};
 }
@@ -86,6 +88,8 @@ QHash<int, QByteArray> MessageModel::roleNames() const
         { IsStarredRole,       "isStarred" },
         { HasAttachmentsRole,  "hasAttachments" },
         { PreviewRole,         "preview" },
+        { MessageIdRole,       "messageId" },
+        { ReferencesRole,      "references" },
     };
 }
 
@@ -160,7 +164,7 @@ void MessageModel::loadMessages()
         QSqlQuery query(db);
         query.prepare(QStringLiteral(
             "SELECT account_id, folder_path, uid, subject, sender, date, "
-            "is_read, is_starred, has_attachments, preview "
+            "is_read, is_starred, has_attachments, preview, message_id, references_ "
             "FROM messages WHERE account_id = ? AND folder_path = ? "
             "ORDER BY date DESC"));
         query.addBindValue(m_accountId);
@@ -179,6 +183,8 @@ void MessageModel::loadMessages()
                 msg.isStarred = query.value(7).toBool();
                 msg.hasAttachments = query.value(8).toBool();
                 msg.preview = query.value(9).toString();
+                msg.messageId = query.value(10).toString();
+                msg.references = query.value(11).toString();
                 m_messages.append(msg);
             }
         }

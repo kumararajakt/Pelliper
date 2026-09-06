@@ -72,6 +72,8 @@ Kirigami.Page {
                 onFolderSelected: function (accountId, folderPath) {
                     Pelliper.MessageModel.accountId = accountId;
                     Pelliper.MessageModel.folderPath = folderPath;
+                    Pelliper.ThreadModel.accountId = accountId;
+                    Pelliper.ThreadModel.folderPath = folderPath;
                     Pelliper.DaemonClient.setIdleFolder(accountId, folderPath);
                 }
 
@@ -96,6 +98,8 @@ Kirigami.Page {
                                     sidebar.currentIndex = i;
                                     sidebar.folderSelected(acid, path);
                                     sidebar.saveSelection(acid, path);
+                                    Pelliper.ThreadModel.accountId = acid;
+                                    Pelliper.ThreadModel.folderPath = path;
                                     break;
                                 }
                             }

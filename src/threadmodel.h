@@ -6,10 +6,10 @@
 #include <QTimer>
 #include <QtQml/qqmlregistration.h>
 
-struct MessageEntry {
+struct ThreadGroup {
     int accountId;
     QString folderPath;
-    int uid;
+    int rootUid;
     QString subject;
     QString sender;
     qint64 date;
@@ -18,10 +18,11 @@ struct MessageEntry {
     bool hasAttachments;
     QString preview;
     QString messageId;
-    QString references;
+    int replyCount;
+    int unreadCount;
 };
 
-class MessageModel : public QAbstractListModel
+class ThreadModel : public QAbstractListModel
 {
     Q_OBJECT
     QML_ELEMENT
@@ -44,10 +45,11 @@ public:
         HasAttachmentsRole,
         PreviewRole,
         MessageIdRole,
-        ReferencesRole,
+        ReplyCountRole,
+        UnreadCountRole,
     };
 
-    explicit MessageModel(QObject *parent = nullptr);
+    explicit ThreadModel(QObject *parent = nullptr);
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     QVariant data(const QModelIndex &index, int role) const override;
@@ -72,11 +74,12 @@ private:
 private:
     void startWatching();
     void loadMessages();
+    void buildThreads();
     static QString cacheDbPath();
 
     int m_accountId = -1;
     QString m_folderPath;
-    QList<MessageEntry> m_messages;
+    QList<ThreadGroup> m_threads;
 
     QFileSystemWatcher m_watcher;
     QTimer m_refreshTimer;
