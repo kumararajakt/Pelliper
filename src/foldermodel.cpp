@@ -11,7 +11,41 @@ static const QString DB_CONN = QStringLiteral("pelliper_folders_readonly");
 FolderModel::FolderModel(QObject *parent)
     : QAbstractListModel(parent)
 {
+    // Debounce rapid file changes (WAL writes happen in bursts)
+    m_refreshTimer.setSingleShot(true);
+    m_refreshTimer.setInterval(500);
+    connect(&m_refreshTimer, &QTimer::timeout, this, &FolderModel::refresh);
+
     refresh();
+    startWatching();
+}
+
+void FolderModel::startWatching()
+{
+    QString dbPath = cacheDbPath();
+    if (QFile::exists(dbPath) && !m_watcher.files().contains(dbPath)) {
+        m_watcher.addPath(dbPath);
+        connect(&m_watcher, &QFileSystemWatcher::fileChanged,
+                this, &FolderModel::onFileChanged);
+        // Also watch the WAL and SHM files for SQLite WAL mode
+        m_watcher.addPath(dbPath + QStringLiteral("-wal"));
+        m_watcher.addPath(dbPath + QStringLiteral("-shm"));
+    }
+}
+
+void FolderModel::onFileChanged(const QString &path)
+{
+    Q_UNUSED(path)
+    // Debounce: restart timer on each change to avoid re-reading during burst writes
+    if (!m_refreshTimer.isActive()) {
+        m_refreshTimer.start();
+    }
+
+    // Re-add the file if it was removed (can happen with WAL checkpointing)
+    QString dbPath = cacheDbPath();
+    if (!m_watcher.files().contains(dbPath) && QFile::exists(dbPath)) {
+        m_watcher.addPath(dbPath);
+    }
 }
 
 QString FolderModel::cacheDbPath()
@@ -88,6 +122,9 @@ void FolderModel::refresh()
         endResetModel();
         return;
     }
+
+    // Ensure we're watching the file
+    startWatching();
 
     {
         QSqlDatabase db = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), DB_CONN);

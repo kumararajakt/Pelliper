@@ -1,7 +1,9 @@
 #pragma once
 
 #include <QAbstractListModel>
+#include <QFileSystemWatcher>
 #include <QSqlDatabase>
+#include <QTimer>
 #include <QtQml/qqmlregistration.h>
 
 struct FolderEntry {
@@ -44,8 +46,14 @@ Q_SIGNALS:
     void countChanged();
 
 private:
+    Q_SLOT void onFileChanged(const QString &path);
+
+private:
+    void startWatching();
     static QString cacheDbPath();
     static QString displayNameFromPath(const QString &path);
     static QString iconNameFromPath(const QString &path);
     QList<FolderEntry> m_folders;
+    QFileSystemWatcher m_watcher;
+    QTimer m_refreshTimer; // debounce rapid file changes
 };
