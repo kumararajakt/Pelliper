@@ -18,6 +18,8 @@ target_sources(pelliper
     daemonclient.h
     accountmodel.cpp
     accountmodel.h
+    foldermodel.cpp
+    foldermodel.h
 )
 
 ecm_target_qml_sources(pelliper
