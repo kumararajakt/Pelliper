@@ -9,33 +9,6 @@ ListView {
 
     model: Pelliper.FolderModel
 
-    header: ColumnLayout {
-        width: folderList.width
-
-        RowLayout {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 48
-            Layout.leftMargin: Kirigami.Units.smallSpacing
-            Layout.rightMargin: Kirigami.Units.smallSpacing
-
-            Controls.Label {
-                text: qsTr("Folders")
-                font.pointSize: 14
-                font.weight: Font.Bold
-                Layout.fillWidth: true
-            }
-
-            Controls.ToolButton {
-                icon.name: "view-refresh"
-                onClicked: Pelliper.FolderModel.refresh()
-            }
-        }
-
-        Kirigami.Separator {
-            Layout.fillWidth: true
-        }
-    }
-
     Kirigami.PlaceholderMessage {
         anchors.centerIn: parent
         width: parent.width - (Kirigami.Units.largeSpacing * 4)
