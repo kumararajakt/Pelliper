@@ -9,6 +9,8 @@ ListView {
 
     model: Pelliper.FolderModel
 
+    signal folderSelected(int accountId, string folderPath)
+
     Kirigami.PlaceholderMessage {
         anchors.centerIn: parent
         width: parent.width - (Kirigami.Units.largeSpacing * 4)
@@ -33,7 +35,6 @@ ListView {
         required property int index
 
         width: folderList.width
-        height: item.isAccountHeader ? 40 : implicitHeight
 
         contentItem: RowLayout {
             spacing: Kirigami.Units.smallSpacing
@@ -116,6 +117,13 @@ ListView {
             }
         }
 
-        onClicked: Pelliper.FolderModel.toggleExpanded(item.index)
+        onClicked: {
+            if (item.isAccountHeader) {
+                Pelliper.FolderModel.toggleExpanded(item.index)
+            } else {
+                folderList.currentIndex = index
+                folderList.folderSelected(item.accountId, item.path)
+            }
+        }
     }
 }

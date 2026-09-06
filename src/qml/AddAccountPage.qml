@@ -42,7 +42,7 @@ Kirigami.Page {
                 email, name,
                 imapHostField.text, parseInt(imapPortField.text) || 993,
                 smtpHostField.text, parseInt(smtpPortField.text) || 587,
-                "oauth", accessToken
+                "oauth", accessToken, refreshToken
             );
         }
         function onFailed(message) {

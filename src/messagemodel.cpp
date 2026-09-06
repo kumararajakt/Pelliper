@@ -1,0 +1,192 @@
+#include "messagemodel.h"
+
+#include <QDateTime>
+#include <QFile>
+#include <QSqlError>
+#include <QSqlQuery>
+#include <QStandardPaths>
+#include <QDir>
+
+static const QString DB_CONN = QStringLiteral("pelliper_messages_readonly");
+
+MessageModel::MessageModel(QObject *parent)
+    : QAbstractListModel(parent)
+{
+    m_refreshTimer.setSingleShot(true);
+    m_refreshTimer.setInterval(500);
+    connect(&m_refreshTimer, &QTimer::timeout, this, &MessageModel::refresh);
+    startWatching();
+}
+
+void MessageModel::startWatching()
+{
+    QString dbPath = cacheDbPath();
+    if (QFile::exists(dbPath) && !m_watcher.files().contains(dbPath)) {
+        m_watcher.addPath(dbPath);
+        connect(&m_watcher, &QFileSystemWatcher::fileChanged,
+                this, &MessageModel::onFileChanged);
+        m_watcher.addPath(dbPath + QStringLiteral("-wal"));
+        m_watcher.addPath(dbPath + QStringLiteral("-shm"));
+    }
+}
+
+void MessageModel::onFileChanged(const QString &path)
+{
+    Q_UNUSED(path)
+    if (!m_folderPath.isEmpty() && !m_refreshTimer.isActive())
+        m_refreshTimer.start();
+    QString dbPath = cacheDbPath();
+    if (!m_watcher.files().contains(dbPath) && QFile::exists(dbPath))
+        m_watcher.addPath(dbPath);
+}
+
+QString MessageModel::cacheDbPath()
+{
+    return QDir(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation))
+        .filePath(QStringLiteral("pelliper/cache.db"));
+}
+
+int MessageModel::rowCount(const QModelIndex &parent) const
+{
+    if (parent.isValid()) return 0;
+    return m_messages.size();
+}
+
+QVariant MessageModel::data(const QModelIndex &index, int role) const
+{
+    if (!index.isValid() || index.row() >= m_messages.size())
+        return {};
+
+    const auto &msg = m_messages.at(index.row());
+    switch (role) {
+    case AccountIdRole:       return msg.accountId;
+    case FolderPathRole:      return msg.folderPath;
+    case UidRole:             return msg.uid;
+    case SubjectRole:         return msg.subject;
+    case SenderRole:          return msg.sender;
+    case DateRole:            return msg.date;
+    case IsReadRole:          return msg.isRead;
+    case IsStarredRole:       return msg.isStarred;
+    case HasAttachmentsRole:  return msg.hasAttachments;
+    case PreviewRole:         return msg.preview;
+    }
+    return {};
+}
+
+QHash<int, QByteArray> MessageModel::roleNames() const
+{
+    return {
+        { AccountIdRole,       "accountId" },
+        { FolderPathRole,      "folderPath" },
+        { UidRole,             "uid" },
+        { SubjectRole,         "subject" },
+        { SenderRole,          "sender" },
+        { DateRole,            "date" },
+        { IsReadRole,          "isRead" },
+        { IsStarredRole,       "isStarred" },
+        { HasAttachmentsRole,  "hasAttachments" },
+        { PreviewRole,         "preview" },
+    };
+}
+
+int MessageModel::count() const
+{
+    return m_messages.size();
+}
+
+QString MessageModel::folderPath() const
+{
+    return m_folderPath;
+}
+
+void MessageModel::setFolderPath(const QString &path)
+{
+    if (m_folderPath == path) return;
+    m_folderPath = path;
+    Q_EMIT folderPathChanged();
+    loadMessages();
+}
+
+int MessageModel::accountId() const
+{
+    return m_accountId;
+}
+
+void MessageModel::setAccountId(int id)
+{
+    if (m_accountId == id) return;
+    m_accountId = id;
+    Q_EMIT accountIdChanged();
+    loadMessages();
+}
+
+void MessageModel::refresh()
+{
+    loadMessages();
+}
+
+void MessageModel::loadMessages()
+{
+    beginResetModel();
+    m_messages.clear();
+
+    if (m_accountId < 0 || m_folderPath.isEmpty()) {
+        endResetModel();
+        Q_EMIT countChanged();
+        return;
+    }
+
+    QString dbPath = cacheDbPath();
+    if (!QFile::exists(dbPath)) {
+        endResetModel();
+        Q_EMIT countChanged();
+        return;
+    }
+
+    startWatching();
+
+    {
+        QSqlDatabase db = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), DB_CONN);
+        db.setDatabaseName(dbPath);
+        db.setConnectOptions(QStringLiteral("QSQLITE_OPEN_READONLY"));
+
+        if (!db.open()) {
+            qWarning() << "MessageModel: failed to open cache.db:" << db.lastError().text();
+            endResetModel();
+            Q_EMIT countChanged();
+            return;
+        }
+
+        QSqlQuery query(db);
+        query.prepare(QStringLiteral(
+            "SELECT account_id, folder_path, uid, subject, sender, date, "
+            "is_read, is_starred, has_attachments, preview "
+            "FROM messages WHERE account_id = ? AND folder_path = ? "
+            "ORDER BY date DESC"));
+        query.addBindValue(m_accountId);
+        query.addBindValue(m_folderPath);
+
+        if (query.exec()) {
+            while (query.next()) {
+                MessageEntry msg;
+                msg.accountId = query.value(0).toInt();
+                msg.folderPath = query.value(1).toString();
+                msg.uid = query.value(2).toInt();
+                msg.subject = query.value(3).toString();
+                msg.sender = query.value(4).toString();
+                msg.date = query.value(5).toLongLong();
+                msg.isRead = query.value(6).toBool();
+                msg.isStarred = query.value(7).toBool();
+                msg.hasAttachments = query.value(8).toBool();
+                msg.preview = query.value(9).toString();
+                m_messages.append(msg);
+            }
+        }
+
+        db.close();
+    }
+    QSqlDatabase::removeDatabase(DB_CONN);
+
+    endResetModel();
+    Q_EMIT countChanged();
+}

@@ -34,7 +34,8 @@ void DaemonClient::addAccount(
     const QString &smtpHost,
     int smtpPort,
     const QString &authType,
-    const QString &authToken
+    const QString &authToken,
+    const QString &refreshToken
 ) {
     if (m_busy) {
         return;
@@ -57,7 +58,7 @@ void DaemonClient::addAccount(
          << static_cast<qint32>(imapPort)
          << smtpHost
          << static_cast<qint32>(smtpPort)
-         << authType << authToken;
+         << authType << authToken << refreshToken;
     msg.setArguments(args);
 
     QDBusPendingCall call = QDBusConnection::sessionBus().asyncCall(msg);
@@ -100,4 +101,86 @@ void DaemonClient::setBusy(bool value)
     if (m_busy == value) return;
     m_busy = value;
     Q_EMIT busyChanged();
+}
+
+void DaemonClient::getFolders(qint64 accountId)
+{
+    if (!m_available) return;
+
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        SERVICE, PATH, INTERFACE, QStringLiteral("GetFolders"));
+    msg.setArguments({QVariant::fromValue(accountId)});
+
+    QDBusPendingCall call = QDBusConnection::sessionBus().asyncCall(msg);
+    auto *watcher = new QDBusPendingCallWatcher(call, this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher]() {
+        onGenericReply(watcher, QStringLiteral("foldersLoaded"));
+    });
+}
+
+void DaemonClient::getMessages(qint64 accountId, const QString &folderPath, qint64 offset, qint64 limit)
+{
+    if (!m_available) return;
+
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        SERVICE, PATH, INTERFACE, QStringLiteral("GetMessages"));
+    msg.setArguments({QVariant::fromValue(accountId), folderPath, QVariant::fromValue(offset), QVariant::fromValue(limit)});
+
+    QDBusPendingCall call = QDBusConnection::sessionBus().asyncCall(msg);
+    auto *watcher = new QDBusPendingCallWatcher(call, this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher]() {
+        onGenericReply(watcher, QStringLiteral("messagesLoaded"));
+    });
+}
+
+void DaemonClient::countMessages(qint64 accountId, const QString &folderPath)
+{
+    if (!m_available) return;
+
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        SERVICE, PATH, INTERFACE, QStringLiteral("CountMessages"));
+    msg.setArguments({QVariant::fromValue(accountId), folderPath});
+
+    QDBusPendingCall call = QDBusConnection::sessionBus().asyncCall(msg);
+    auto *watcher = new QDBusPendingCallWatcher(call, this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher]() {
+        QDBusPendingReply<qint64> reply = *watcher;
+        watcher->deleteLater();
+        if (!reply.isError()) {
+            Q_EMIT messageCountLoaded(reply.value());
+        }
+    });
+}
+
+void DaemonClient::syncAll()
+{
+    if (!m_available) return;
+
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        SERVICE, PATH, INTERFACE, QStringLiteral("SyncAll"));
+
+    QDBusPendingCall call = QDBusConnection::sessionBus().asyncCall(msg);
+    auto *watcher = new QDBusPendingCallWatcher(call, this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher]() {
+        QDBusPendingReply<bool> reply = *watcher;
+        watcher->deleteLater();
+        Q_EMIT syncAllFinished(!reply.isError() && reply.value());
+    });
+}
+
+void DaemonClient::onGenericReply(QDBusPendingCallWatcher *watcher, const QString &signal)
+{
+    QDBusPendingReply<QString> reply = *watcher;
+    watcher->deleteLater();
+
+    if (reply.isError()) {
+        Q_EMIT accountFailed(QString(), reply.error().message());
+        return;
+    }
+
+    if (signal == QStringLiteral("foldersLoaded")) {
+        Q_EMIT foldersLoaded(reply.value());
+    } else if (signal == QStringLiteral("messagesLoaded")) {
+        Q_EMIT messagesLoaded(reply.value());
+    }
 }

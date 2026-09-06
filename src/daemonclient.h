@@ -28,17 +28,28 @@ public:
         const QString &smtpHost,
         int smtpPort,
         const QString &authType,
-        const QString &authToken
+        const QString &authToken,
+        const QString &refreshToken = QString()
     );
+
+    Q_INVOKABLE void getFolders(qint64 accountId);
+    Q_INVOKABLE void getMessages(qint64 accountId, const QString &folderPath, qint64 offset, qint64 limit);
+    Q_INVOKABLE void countMessages(qint64 accountId, const QString &folderPath);
+    Q_INVOKABLE void syncAll();
 
 Q_SIGNALS:
     void availableChanged();
     void busyChanged();
     void accountAdded(const QString &email);
     void accountFailed(const QString &email, const QString &error);
+    void foldersLoaded(const QString &json);
+    void messagesLoaded(const QString &json);
+    void messageCountLoaded(qint64 count);
+    void syncAllFinished(bool success);
 
 private Q_SLOTS:
     void onAddAccountReply(QDBusPendingCallWatcher *watcher);
+    void onGenericReply(QDBusPendingCallWatcher *watcher, const QString &signal);
 
 private:
     void setAvailable(bool value);

@@ -20,6 +20,8 @@ target_sources(pelliper
     accountmodel.h
     foldermodel.cpp
     foldermodel.h
+    messagemodel.cpp
+    messagemodel.h
 )
 
 ecm_target_qml_sources(pelliper
