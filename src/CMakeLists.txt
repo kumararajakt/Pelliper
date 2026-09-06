@@ -12,7 +12,7 @@ target_sources(pelliper
 
 ecm_target_qml_sources(pelliper
     SOURCES
-    qml/main.qml
+    qml/Main.qml
     qml/ThreePaneView.qml
     qml/AddAccountPage.qml
     qml/ComposePage.qml

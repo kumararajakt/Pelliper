@@ -23,7 +23,7 @@ Kirigami.ApplicationWindow {
                     icon.name: "list-add-user"
                     Layout.alignment: Qt.AlignHCenter
                     Layout.topMargin: Kirigami.Units.largeSpacing
-                    onClicked: root.pageStack.push(addAccountComponent)
+                    onClicked: root.pageStack.layers.push(addAccountComponent)
                 }
             }
         }
