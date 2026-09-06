@@ -6,6 +6,8 @@
 #include <KLocalizedString>
 #include <KIconTheme>
 
+#include "autodiscover.h"
+
 int main(int argc, char *argv[])
 {
     KIconTheme::initTheme();

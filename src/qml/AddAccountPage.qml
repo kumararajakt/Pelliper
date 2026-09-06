@@ -2,21 +2,35 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import org.kde.pelliper as Pelliper
 
 Kirigami.Page {
     id: root
     title: "Add Account"
 
     property int currentPage: 0
-    property string imapHost: ""
-    property int imapPort: 0
-    property string smtpHost: ""
-    property int smtpPort: 0
-    property bool discovering: false
+    property string errorMessage: ""
 
+    function isValidEmail(email) {
+        var re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(email);
+    }
 
-
-
+    Connections {
+        target: Pelliper.Autodiscover
+        function onDiscovered(imapHost, imapPort, imapSecurity, smtpHost, smtpPort, smtpSecurity) {
+            imapHostField.text = imapHost;
+            imapPortField.text = imapPort;
+            imapSecurityField.text = imapSecurity;
+            smtpHostField.text = smtpHost;
+            smtpPortField.text = smtpPort;
+            smtpSecurityField.text = smtpSecurity;
+            root.currentPage = 2;
+        }
+        function onFailed() {
+            root.currentPage = 1;
+        }
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -62,23 +76,20 @@ Kirigami.Page {
                     id: emailField
                     placeholderText: "Email Address"
                     Layout.fillWidth: true
-                    onEditingFinished: {
-                        if (text.includes("@")) {
-                            console.log(Pelliper.hasAccounts)
-                            // root.autodiscover(text)
-                        }
-                    }
-                }
-
-                Controls.Label {
-                    text: "Provider will be auto-detected from your email domain"
-                    color: Kirigami.Theme.disabledTextColor
                 }
 
                 Controls.BusyIndicator {
-                    running: root.discovering
-                    visible: root.discovering
+                    running: Pelliper.Autodiscover.discovering
+                    visible: Pelliper.Autodiscover.discovering
                     Layout.alignment: Qt.AlignHCenter
+                }
+
+                Controls.Label {
+                    text: root.errorMessage
+                    visible: root.errorMessage.length > 0
+                    color: Kirigami.Theme.negativeTextColor
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
                 }
             }
 
@@ -93,29 +104,53 @@ Kirigami.Page {
                 }
 
                 Controls.TextField {
+                    id: imapHostField
                     placeholderText: "IMAP Host"
-                    text: root.imapHost
                     Layout.fillWidth: true
                 }
 
-                Controls.TextField {
-                    placeholderText: "IMAP Port"
-                    text: root.imapPort > 0 ? root.imapPort : ""
+                RowLayout {
                     Layout.fillWidth: true
-                    inputMethodHints: Qt.ImhDigitsOnly
+                    spacing: Kirigami.Units.smallSpacing
+
+                    Controls.TextField {
+                        id: imapPortField
+                        placeholderText: "IMAP Port"
+                        Layout.fillWidth: true
+                        inputMethodHints: Qt.ImhDigitsOnly
+                    }
+
+                    Controls.TextField {
+                        id: imapSecurityField
+                        placeholderText: "Security"
+                        Layout.fillWidth: true
+                        readOnly: true
+                    }
                 }
 
                 Controls.TextField {
+                    id: smtpHostField
                     placeholderText: "SMTP Host"
-                    text: root.smtpHost
                     Layout.fillWidth: true
                 }
 
-                Controls.TextField {
-                    placeholderText: "SMTP Port"
-                    text: root.smtpPort > 0 ? root.smtpPort : ""
+                RowLayout {
                     Layout.fillWidth: true
-                    inputMethodHints: Qt.ImhDigitsOnly
+                    spacing: Kirigami.Units.smallSpacing
+
+                    Controls.TextField {
+                        id: smtpPortField
+                        placeholderText: "SMTP Port"
+                        Layout.fillWidth: true
+                        inputMethodHints: Qt.ImhDigitsOnly
+                    }
+
+                    Controls.TextField {
+                        id: smtpSecurityField
+                        placeholderText: "Security"
+                        Layout.fillWidth: true
+                        readOnly: true
+                    }
                 }
             }
 
@@ -130,6 +165,7 @@ Kirigami.Page {
                 }
 
                 Controls.TextField {
+                    id: passwordField
                     placeholderText: "Password"
                     echoMode: TextInput.Password
                     Layout.fillWidth: true
@@ -159,14 +195,22 @@ Kirigami.Page {
             Controls.Button {
                 text: root.currentPage < 2 ? "Next" : "Save"
                 highlighted: true
+                enabled: !Pelliper.Autodiscover.discovering
                 onClicked: {
                     if (root.currentPage === 0) {
-                        console.log(Pelliper.hasAccounts)
-                    }
-                    if (root.currentPage < 2) {
-                        root.currentPage++
-                    } else {
-                        // TODO: save account
+                        root.errorMessage = "";
+                        var email = emailField.text.trim();
+                        if (email.length === 0) {
+                            root.errorMessage = "Please enter an email address.";
+                            return;
+                        }
+                        if (!root.isValidEmail(email)) {
+                            root.errorMessage = "Please enter a valid email address.";
+                            return;
+                        }
+                        Pelliper.Autodiscover.discover(email);
+                    } else if (root.currentPage === 2) {
+                        // TODO: save account via D-Bus
                     }
                 }
             }

@@ -1,5 +1,7 @@
 add_executable(pelliper)
 
+set_target_properties(pelliper PROPERTIES AUTOMOC ON)
+
 ecm_add_qml_module(pelliper
     URI
     org.kde.pelliper
@@ -8,6 +10,8 @@ ecm_add_qml_module(pelliper
 target_sources(pelliper
     PRIVATE
     main.cpp
+    autodiscover.cpp
+    autodiscover.h
 )
 
 ecm_target_qml_sources(pelliper
