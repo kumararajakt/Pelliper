@@ -14,6 +14,8 @@ target_sources(pelliper
     autodiscover.h
     oauth.cpp
     oauth.h
+    daemonclient.cpp
+    daemonclient.h
 )
 
 ecm_target_qml_sources(pelliper

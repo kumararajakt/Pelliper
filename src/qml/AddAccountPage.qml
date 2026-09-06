@@ -10,7 +10,6 @@ Kirigami.Page {
 
     property int currentPage: 0
     property string errorMessage: ""
-    property bool useOAuth: false
 
     function isValidEmail(email) {
         var re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -37,11 +36,28 @@ Kirigami.Page {
         target: Pelliper.OAuth2
         function onAuthenticated(accessToken, refreshToken, email, displayName) {
             root.errorMessage = "";
-            // TODO: send tokens to daemon via D-Bus
-            console.log("OAuth success, tokens received for:", email);
+            var name = displayNameField.text.trim();
+            if (name.length === 0) name = email;
+            Pelliper.DaemonClient.addAccount(
+                email, name,
+                imapHostField.text, parseInt(imapPortField.text) || 993,
+                smtpHostField.text, parseInt(smtpPortField.text) || 587,
+                "oauth", accessToken
+            );
         }
         function onFailed(message) {
             root.errorMessage = message;
+        }
+    }
+
+    Connections {
+        target: Pelliper.DaemonClient
+        function onAccountAdded(email) {
+            root.errorMessage = "";
+            applicationWindow().pageStack.layers.pop();
+        }
+        function onAccountFailed(email, error) {
+            root.errorMessage = error;
         }
     }
 
@@ -194,7 +210,6 @@ Kirigami.Page {
                         Layout.fillWidth: true
                         highlighted: true
                         onClicked: {
-                            root.useOAuth = true;
                             root.errorMessage = "";
                             Pelliper.OAuth2.detectProvider(emailField.text.trim());
                             Pelliper.OAuth2.startAuth();
@@ -249,7 +264,7 @@ Kirigami.Page {
             Controls.Button {
                 text: root.currentPage < 2 ? "Next" : "Save"
                 highlighted: true
-                enabled: !Pelliper.Autodiscover.discovering && !Pelliper.OAuth2.authenticating
+                enabled: !Pelliper.Autodiscover.discovering && !Pelliper.OAuth2.authenticating && !Pelliper.DaemonClient.busy
                 onClicked: {
                     if (root.currentPage === 0) {
                         root.errorMessage = "";
@@ -265,11 +280,9 @@ Kirigami.Page {
                         Pelliper.OAuth2.detectProvider(email);
                         Pelliper.Autodiscover.discover(email);
                     } else if (root.currentPage === 2) {
-                        // TODO: save account via D-Bus
-                        if (root.useOAuth) {
-                            console.log("Saving OAuth account");
-                        } else {
-                            console.log("Saving password account");
+                        // Password-based accounts (non-OAuth)
+                        if (!Pelliper.OAuth2.hasProvider) {
+                            root.errorMessage = "Password login is not yet supported. Only OAuth providers (Gmail, Outlook) are available.";
                         }
                     }
                 }

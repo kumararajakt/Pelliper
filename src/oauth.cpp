@@ -66,6 +66,9 @@ QVector<OAuthProvider> OAuth2::knownProviders()
 
 void OAuth2::detectProvider(const QString &email)
 {
+    qWarning() << "OAuth2::detectProvider" << email;
+    m_email = email;
+
     const int atIdx = email.indexOf(QLatin1Char('@'));
     if (atIdx < 0) {
         m_provider = {};
@@ -337,6 +340,7 @@ void OAuth2::onTokenReply()
 
     setStatus(tr("Authentication successful!"));
     setAuthenticating(false);
+    qWarning() << "OAuth2 emitting authenticated:" << m_email << m_displayName;
     Q_EMIT authenticated(accessToken, refreshToken, m_email, m_displayName);
 }
 
