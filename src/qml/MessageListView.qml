@@ -6,6 +6,8 @@ import org.kde.pelliper as Pelliper
 
 ColumnLayout {
 
+    signal messageSelected(int accountId, string folderPath, int uid, string subject, string sender, real date)
+
     // Header showing current folder
     RowLayout {
         Layout.fillWidth: true
@@ -133,6 +135,7 @@ ColumnLayout {
 
             onClicked: {
                 messageList.currentIndex = index
+                messageSelected(msgDelegate.accountId, msgDelegate.folderPath, msgDelegate.uid, msgDelegate.subject, msgDelegate.sender, msgDelegate.date)
             }
         }
     }

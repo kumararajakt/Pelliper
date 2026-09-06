@@ -37,6 +37,7 @@ public:
     Q_INVOKABLE void countMessages(qint64 accountId, const QString &folderPath);
     Q_INVOKABLE void syncAll();
     Q_INVOKABLE void setIdleFolder(qint64 accountId, const QString &folderPath);
+    Q_INVOKABLE void loadBody(qint64 accountId, const QString &folderPath, qint64 uid);
 
 Q_SIGNALS:
     void availableChanged();
@@ -47,6 +48,7 @@ Q_SIGNALS:
     void messagesLoaded(const QString &json);
     void messageCountLoaded(qint64 count);
     void syncAllFinished(bool success);
+    void bodyLoaded(qint64 uid, const QString &html);
 
 private Q_SLOTS:
     void onAddAccountReply(QDBusPendingCallWatcher *watcher);

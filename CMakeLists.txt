@@ -18,6 +18,7 @@ find_package(Qt6 REQUIRED COMPONENTS
     Widgets
     DBus
     Sql
+    WebEngineQuick
 )
 
 find_package(KF6 REQUIRED COMPONENTS

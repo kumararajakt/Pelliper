@@ -6,6 +6,10 @@ import org.kde.pelliper as Pelliper
 
 Kirigami.Page {
 
+    property int selectedAccountId: -1
+    property string selectedFolderPath: ""
+    property int selectedUid: -1
+
     Controls.SplitView {
         id: splitView
         anchors.fill: parent
@@ -51,11 +55,28 @@ Kirigami.Page {
         }
 
         MessageListView {
+            id: messageList
             Controls.SplitView.preferredWidth: Kirigami.Units.gridUnit * 30
             Controls.SplitView.minimumWidth: Kirigami.Units.gridUnit * 20
+
+            onMessageSelected: function(accountId, folderPath, uid, subject, sender, date) {
+                selectedAccountId = accountId
+                selectedFolderPath = folderPath
+                selectedUid = uid
+
+                messageView.subject = subject || ""
+                messageView.sender = sender || ""
+                messageView.messageDate = date || 0
+
+                // Reset body and fetch
+                messageView.bodyHtml = ""
+                messageView.currentUid = uid
+                Pelliper.DaemonClient.loadBody(accountId, folderPath, uid)
+            }
         }
 
         MessageView {
+            id: messageView
             Controls.SplitView.fillWidth: true
             Controls.SplitView.minimumWidth: Kirigami.Units.gridUnit * 25
         }

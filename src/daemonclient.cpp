@@ -179,6 +179,27 @@ void DaemonClient::setIdleFolder(qint64 accountId, const QString &folderPath)
     QDBusConnection::sessionBus().asyncCall(msg);
 }
 
+void DaemonClient::loadBody(qint64 accountId, const QString &folderPath, qint64 uid)
+{
+    if (!m_available) return;
+
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        SERVICE, PATH, INTERFACE, QStringLiteral("LoadBody"));
+    msg.setArguments({QVariant::fromValue(accountId), folderPath, QVariant::fromValue(uid)});
+
+    QDBusPendingCall call = QDBusConnection::sessionBus().asyncCall(msg);
+    auto *watcher = new QDBusPendingCallWatcher(call, this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, uid]() {
+        QDBusPendingReply<QString> reply = *watcher;
+        watcher->deleteLater();
+        if (!reply.isError()) {
+            Q_EMIT bodyLoaded(uid, reply.value());
+        } else {
+            Q_EMIT bodyLoaded(uid, QStringLiteral("<p>Failed to load body</p>"));
+        }
+    });
+}
+
 void DaemonClient::onGenericReply(QDBusPendingCallWatcher *watcher, const QString &signal)
 {
     QDBusPendingReply<QString> reply = *watcher;

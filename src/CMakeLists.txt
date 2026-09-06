@@ -5,6 +5,8 @@ set_target_properties(pelliper PROPERTIES AUTOMOC ON)
 ecm_add_qml_module(pelliper
     URI
     org.kde.pelliper
+    IMPORT_DEPENDENCIES
+    QtWebEngine
 )
 
 target_sources(pelliper
@@ -45,6 +47,7 @@ target_link_libraries(pelliper
     Qt6::DBus
     Qt6::Network
     Qt6::Sql
+    Qt6::WebEngineQuick
     KF6::I18n
     KF6::I18nQml
     KF6::CoreAddons

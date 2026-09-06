@@ -1,6 +1,7 @@
 #include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
+#include <QtWebEngineQuick/qtwebenginequickglobal.h>
 #include <KLocalization>
 #include <KLocalizedQmlContext>
 #include <KLocalizedString>
@@ -11,6 +12,7 @@
 int main(int argc, char *argv[])
 {
     KIconTheme::initTheme();
+    QtWebEngineQuick::initialize();
     QApplication app(argc, argv);
     KLocalizedString::setApplicationDomain("pelliper");
     QApplication::setOrganizationName(QStringLiteral("KDE"));
