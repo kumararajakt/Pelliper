@@ -168,6 +168,17 @@ void DaemonClient::syncAll()
     });
 }
 
+void DaemonClient::setIdleFolder(qint64 accountId, const QString &folderPath)
+{
+    if (!m_available) return;
+
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        SERVICE, PATH, INTERFACE, QStringLiteral("SetIdleFolder"));
+    msg.setArguments({QVariant::fromValue(accountId), folderPath});
+
+    QDBusConnection::sessionBus().asyncCall(msg);
+}
+
 void DaemonClient::onGenericReply(QDBusPendingCallWatcher *watcher, const QString &signal)
 {
     QDBusPendingReply<QString> reply = *watcher;

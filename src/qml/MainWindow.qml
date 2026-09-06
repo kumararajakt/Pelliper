@@ -18,6 +18,7 @@ Kirigami.Page {
             onFolderSelected: function(accountId, folderPath) {
                 Pelliper.MessageModel.accountId = accountId
                 Pelliper.MessageModel.folderPath = folderPath
+                Pelliper.DaemonClient.setIdleFolder(accountId, folderPath)
             }
 
             Component.onCompleted: {

@@ -36,6 +36,7 @@ public:
     Q_INVOKABLE void getMessages(qint64 accountId, const QString &folderPath, qint64 offset, qint64 limit);
     Q_INVOKABLE void countMessages(qint64 accountId, const QString &folderPath);
     Q_INVOKABLE void syncAll();
+    Q_INVOKABLE void setIdleFolder(qint64 accountId, const QString &folderPath);
 
 Q_SIGNALS:
     void availableChanged();
