@@ -142,6 +142,7 @@ void OAuth2::startAuth()
     params.addQueryItem(QStringLiteral("state"), m_state);
     params.addQueryItem(QStringLiteral("login_hint"), m_email);
     params.addQueryItem(QStringLiteral("prompt"), QStringLiteral("select_account"));
+    params.addQueryItem(QStringLiteral("access_type"), QStringLiteral("offline"));
     authUrl.setQuery(params);
 
     setAuthUrl(authUrl.toString());

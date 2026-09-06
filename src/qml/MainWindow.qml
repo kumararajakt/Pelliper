@@ -19,6 +19,34 @@ Kirigami.Page {
                 Pelliper.MessageModel.accountId = accountId
                 Pelliper.MessageModel.folderPath = folderPath
             }
+
+            Component.onCompleted: {
+                // Auto-select saved folder or INBOX after model loads
+                if (Pelliper.FolderModel.count > 0) {
+                    if (sidebar.savedAccountId >= 0 && sidebar.savedFolderPath !== "") {
+                        sidebar.restoreSelection()
+                    } else {
+                        // Default to INBOX
+                        var roles = Pelliper.FolderModel.roleNames
+                        var pathRole = 0, acidRole = 0
+                        for (var key in roles) {
+                            if (roles[key] === "path") pathRole = Number(key)
+                            if (roles[key] === "accountId") acidRole = Number(key)
+                        }
+                        for (var i = 0; i < Pelliper.FolderModel.count; i++) {
+                            var idx = Pelliper.FolderModel.index(i, 0)
+                            var path = Pelliper.FolderModel.data(idx, pathRole)
+                            if (path === "INBOX") {
+                                var acid = Pelliper.FolderModel.data(idx, acidRole)
+                                sidebar.currentIndex = i
+                                sidebar.folderSelected(acid, path)
+                                sidebar.saveSelection(acid, path)
+                                break
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         MessageListView {

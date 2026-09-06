@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
+import QtCore
 import org.kde.kirigami as Kirigami
 import org.kde.pelliper as Pelliper
 
@@ -9,7 +10,26 @@ ListView {
 
     model: Pelliper.FolderModel
 
+    property int savedAccountId: Number(settings.value("lastAccountId", -1))
+    property string savedFolderPath: settings.value("lastFolderPath", "")
+
     signal folderSelected(int accountId, string folderPath)
+
+    Settings {
+        id: settings
+        category: "folder"
+    }
+
+    function saveSelection(accountId, folderPath) {
+        settings.setValue("lastAccountId", accountId)
+        settings.setValue("lastFolderPath", folderPath)
+    }
+
+    function restoreSelection() {
+        if (savedAccountId >= 0 && savedFolderPath !== "") {
+            folderSelected(savedAccountId, savedFolderPath)
+        }
+    }
 
     Kirigami.PlaceholderMessage {
         anchors.centerIn: parent
@@ -123,6 +143,7 @@ ListView {
             } else {
                 folderList.currentIndex = index
                 folderList.folderSelected(item.accountId, item.path)
+                folderList.saveSelection(item.accountId, item.path)
             }
         }
     }
