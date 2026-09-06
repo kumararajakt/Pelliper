@@ -12,6 +12,8 @@ target_sources(pelliper
     main.cpp
     autodiscover.cpp
     autodiscover.h
+    oauth.cpp
+    oauth.h
 )
 
 ecm_target_qml_sources(pelliper
@@ -30,6 +32,7 @@ target_link_libraries(pelliper
     Qt6::QuickControls2
     Qt6::Widgets
     Qt6::DBus
+    Qt6::Network
     KF6::I18n
     KF6::I18nQml
     KF6::CoreAddons

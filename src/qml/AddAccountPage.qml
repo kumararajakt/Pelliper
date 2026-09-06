@@ -10,6 +10,7 @@ Kirigami.Page {
 
     property int currentPage: 0
     property string errorMessage: ""
+    property bool useOAuth: false
 
     function isValidEmail(email) {
         var re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -29,6 +30,18 @@ Kirigami.Page {
         }
         function onFailed() {
             root.currentPage = 1;
+        }
+    }
+
+    Connections {
+        target: Pelliper.OAuth2
+        function onAuthenticated(accessToken, refreshToken, email, displayName) {
+            root.errorMessage = "";
+            // TODO: send tokens to daemon via D-Bus
+            console.log("OAuth success, tokens received for:", email);
+        }
+        function onFailed(message) {
+            root.errorMessage = message;
         }
     }
 
@@ -164,19 +177,60 @@ Kirigami.Page {
                     font.weight: Font.Bold
                 }
 
-                Controls.TextField {
-                    id: passwordField
-                    placeholderText: "Password"
-                    echoMode: TextInput.Password
-                    Layout.fillWidth: true
+                // Show OAuth option if provider is detected
+                ColumnLayout {
+                    visible: Pelliper.OAuth2.hasProvider
+                    spacing: Kirigami.Units.smallSpacing
+
+                    Controls.Label {
+                        text: "Sign in with %1".arg(Pelliper.OAuth2.hasProvider ? "your provider" : "")
+                        color: Kirigami.Theme.disabledTextColor
+                        Layout.fillWidth: true
+                    }
+
+                    Controls.Button {
+                        text: "Sign in with %1".arg(Pelliper.OAuth2.hasProvider ? "Google" : "Provider")
+                        icon.name: "preferences-system-network-share"
+                        Layout.fillWidth: true
+                        highlighted: true
+                        onClicked: {
+                            root.useOAuth = true;
+                            root.errorMessage = "";
+                            Pelliper.OAuth2.detectProvider(emailField.text.trim());
+                            Pelliper.OAuth2.startAuth();
+                        }
+                    }
                 }
 
-                Controls.Button {
-                    text: "Test Connection"
+                Controls.Label {
+                    visible: !Pelliper.OAuth2.hasProvider
+                    text: "OAuth is required for this provider. Password login is not supported."
+                    color: Kirigami.Theme.disabledTextColor
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    horizontalAlignment: Text.AlignHCenter
+                }
+
+                Controls.BusyIndicator {
+                    running: Pelliper.OAuth2.authenticating
+                    visible: Pelliper.OAuth2.authenticating
                     Layout.alignment: Qt.AlignHCenter
-                    onClicked: {
-                        // TODO: test connection
-                    }
+                }
+
+                Controls.Label {
+                    text: Pelliper.OAuth2.status
+                    visible: Pelliper.OAuth2.status.length > 0 && !Pelliper.OAuth2.authenticating
+                    color: Pelliper.OAuth2.status.includes("successful") ? Kirigami.Theme.highlightColor : Kirigami.Theme.disabledTextColor
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                }
+
+                Controls.Label {
+                    text: root.errorMessage
+                    visible: root.errorMessage.length > 0
+                    color: Kirigami.Theme.negativeTextColor
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
                 }
             }
         }
@@ -195,7 +249,7 @@ Kirigami.Page {
             Controls.Button {
                 text: root.currentPage < 2 ? "Next" : "Save"
                 highlighted: true
-                enabled: !Pelliper.Autodiscover.discovering
+                enabled: !Pelliper.Autodiscover.discovering && !Pelliper.OAuth2.authenticating
                 onClicked: {
                     if (root.currentPage === 0) {
                         root.errorMessage = "";
@@ -208,9 +262,15 @@ Kirigami.Page {
                             root.errorMessage = "Please enter a valid email address.";
                             return;
                         }
+                        Pelliper.OAuth2.detectProvider(email);
                         Pelliper.Autodiscover.discover(email);
                     } else if (root.currentPage === 2) {
                         // TODO: save account via D-Bus
+                        if (root.useOAuth) {
+                            console.log("Saving OAuth account");
+                        } else {
+                            console.log("Saving password account");
+                        }
                     }
                 }
             }
