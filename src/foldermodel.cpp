@@ -11,12 +11,11 @@ static const QString DB_CONN = QStringLiteral("pelliper_folders_readonly");
 
 int FolderModel::depthFromPath(const QString &path)
 {
-    // For [Gmail]/All Mail etc, skip the virtual parent prefix
     QString p = path;
     if (p.startsWith(QLatin1Char('['))) {
         int closeBracket = p.indexOf(QLatin1Char(']'));
         if (closeBracket >= 0 && closeBracket + 1 < p.size() && p[closeBracket + 1] == QLatin1Char('/'))
-            p = p.mid(closeBracket + 2); // skip "[...]/"
+            p = p.mid(closeBracket + 2);
     }
     int depth = 0;
     for (const auto &ch : p) {
@@ -32,7 +31,6 @@ FolderModel::FolderModel(QObject *parent)
     m_refreshTimer.setSingleShot(true);
     m_refreshTimer.setInterval(500);
     connect(&m_refreshTimer, &QTimer::timeout, this, &FolderModel::refresh);
-
     refresh();
     startWatching();
 }
@@ -52,13 +50,11 @@ void FolderModel::startWatching()
 void FolderModel::onFileChanged(const QString &path)
 {
     Q_UNUSED(path)
-    if (!m_refreshTimer.isActive()) {
+    if (!m_refreshTimer.isActive())
         m_refreshTimer.start();
-    }
     QString dbPath = cacheDbPath();
-    if (!m_watcher.files().contains(dbPath) && QFile::exists(dbPath)) {
+    if (!m_watcher.files().contains(dbPath) && QFile::exists(dbPath))
         m_watcher.addPath(dbPath);
-    }
 }
 
 QString FolderModel::cacheDbPath()
@@ -69,21 +65,17 @@ QString FolderModel::cacheDbPath()
 
 FolderRole FolderModel::classifyFolder(const QString &path)
 {
-    // Extract leaf component
     QString leaf = path;
     if (leaf.endsWith(QLatin1Char('/')))
         leaf.chop(1);
-
     int lastSep = leaf.lastIndexOf(QLatin1Char('/'));
     if (lastSep >= 0)
         leaf = leaf.mid(lastSep + 1);
-
     int lastDot = leaf.lastIndexOf(QLatin1Char('.'));
     if (lastDot >= 0)
         leaf = leaf.mid(lastDot + 1);
 
     QString lower = leaf.toLower();
-
     if (lower == QStringLiteral("inbox"))
         return FolderRole::Inbox;
     if (lower == QStringLiteral("sent") || lower == QStringLiteral("sent items") || lower == QStringLiteral("sent mail"))
@@ -98,7 +90,6 @@ FolderRole FolderModel::classifyFolder(const QString &path)
         return FolderRole::Archive;
     if (lower == QStringLiteral("starred") || lower == QStringLiteral("flagged"))
         return FolderRole::Starred;
-
     return FolderRole::Custom;
 }
 
@@ -122,11 +113,9 @@ QString FolderModel::displayNameFromPath(const QString &path)
     if (path.compare(QStringLiteral("INBOX"), Qt::CaseInsensitive) == 0)
         return QStringLiteral("Inbox");
 
-    // Extract leaf
     QString name = path;
     if (name.endsWith(QLatin1Char('/')))
         name.chop(1);
-
     int lastSlash = name.lastIndexOf(QLatin1Char('/'));
     if (lastSlash >= 0)
         name = name.mid(lastSlash + 1);
@@ -148,7 +137,6 @@ QString FolderModel::displayNameFromPath(const QString &path)
         { QStringLiteral("Important"),      QStringLiteral("Important") },
         { QStringLiteral("Deleted Items"),  QStringLiteral("Trash") },
     };
-
     return prettyNames.value(name, name);
 }
 
@@ -171,6 +159,7 @@ QString FolderModel::iconNameFromPath(const QString &path)
 void FolderModel::refresh()
 {
     m_rawFolders.clear();
+    m_accountEmails.clear();
 
     QString dbPath = cacheDbPath();
     if (!QFile::exists(dbPath)) {
@@ -193,13 +182,21 @@ void FolderModel::refresh()
 
         QSqlQuery query(db);
         if (query.exec(QStringLiteral(
-                "SELECT account_id, path, unread_count FROM folders ORDER BY path"))) {
+                "SELECT account_id, path, unread_count, noselect FROM folders ORDER BY path"))) {
             while (query.next()) {
                 RawFolder rf;
                 rf.accountId = query.value(0).toInt();
                 rf.path = query.value(1).toString();
                 rf.unreadCount = query.value(2).toInt();
+                rf.noselect = query.value(3).toBool();
                 m_rawFolders.append(rf);
+            }
+        }
+
+        QSqlQuery acctQuery(db);
+        if (acctQuery.exec(QStringLiteral("SELECT id, email FROM accounts"))) {
+            while (acctQuery.next()) {
+                m_accountEmails.insert(acctQuery.value(0).toInt(), acctQuery.value(1).toString());
             }
         }
 
@@ -218,10 +215,9 @@ void FolderModel::rebuildFlatList()
 
     // Build set of raw paths that have children
     for (const auto &rf : std::as_const(m_rawFolders)) {
-        if (rf.path.startsWith(QLatin1Char('[')) && !rf.path.contains(QLatin1Char('/')))
-            continue;
+        if (rf.noselect) continue;
         for (const auto &other : std::as_const(m_rawFolders)) {
-            if (other.path == rf.path) continue;
+            if (other.path == rf.path || other.noselect) continue;
             if (other.path.startsWith(rf.path + QLatin1Char('/'))) {
                 m_hasChildren.insert(rf.path);
                 break;
@@ -229,14 +225,12 @@ void FolderModel::rebuildFlatList()
         }
     }
 
-    // Classify and sort: essential folders first (by role order), then custom (alphabetically)
-    QList<FolderEntry> essentials;
-    QList<FolderEntry> customs;
+    // Classify into essentials and customs per account
+    QMap<int, QList<FolderEntry>> essentialsByAccount;
+    QMap<int, QList<FolderEntry>> customsByAccount;
 
     for (const auto &rf : std::as_const(m_rawFolders)) {
-        // Skip virtual parent folders (e.g. [Gmail]) that can't hold messages
-        if (rf.path.startsWith(QLatin1Char('[')) && !rf.path.contains(QLatin1Char('/')))
-            continue;
+        if (rf.noselect) continue;
 
         FolderEntry entry;
         entry.accountId = rf.accountId;
@@ -248,51 +242,95 @@ void FolderModel::rebuildFlatList()
         entry.iconName = iconNameFromPath(rf.path);
         entry.depth = entry.isEssential ? 0 : FolderModel::depthFromPath(rf.path);
         entry.hasChildren = m_hasChildren.contains(rf.path);
+        entry.noselect = false;
+        entry.isAccountHeader = false;
+        entry.isExpanded = false;
 
-        if (entry.isEssential) {
-            essentials.append(entry);
-        } else {
-            customs.append(entry);
-        }
+        if (entry.isEssential)
+            essentialsByAccount[rf.accountId].append(entry);
+        else
+            customsByAccount[rf.accountId].append(entry);
     }
 
     // Sort essentials by role order
-    std::sort(essentials.begin(), essentials.end(), [](const FolderEntry &a, const FolderEntry &b) {
-        return folderOrder(a.role) < folderOrder(b.role);
-    });
-
-    // Sort customs in tree order: parents first, then their children right after
-    std::sort(customs.begin(), customs.end(), [&customs](const FolderEntry &a, const FolderEntry &b) {
-        // Parent always comes before child
-        if (b.path.startsWith(a.path + QLatin1Char('/'))) return true;
-        if (a.path.startsWith(b.path + QLatin1Char('/'))) return false;
-        // Siblings or unrelated: sort by path alphabetically
-        return a.path.toLower() < b.path.toLower();
-    });
-
-    // Filter custom folders: hide children whose parent is not expanded
-    QList<FolderEntry> visibleCustoms;
-    for (const auto &entry : std::as_const(customs)) {
-        // Find the immediate parent path
-        int lastSep = entry.path.lastIndexOf(QLatin1Char('/'));
-        if (lastSep > 0) {
-            QString parentPath = entry.path.left(lastSep);
-            // Skip [Gmail] virtual parent (e.g. [Gmail] with no nested /)
-            if (parentPath.startsWith(QLatin1Char('['))) {
-                int closeBracket = parentPath.indexOf(QLatin1Char(']'));
-                if (closeBracket >= 0 && closeBracket + 1 >= parentPath.size())
-                    parentPath.clear(); // pure [Gmail] with no subpath
-                else if (closeBracket >= 0 && closeBracket + 1 < parentPath.size() && parentPath[closeBracket + 1] == QLatin1Char('/'))
-                    parentPath = parentPath.mid(closeBracket + 2);
-            }
-            if (!parentPath.isEmpty() && !m_expanded.contains(parentPath))
-                continue; // parent not expanded, hide this child
-        }
-        visibleCustoms.append(entry);
+    for (auto it = essentialsByAccount.begin(); it != essentialsByAccount.end(); ++it) {
+        std::sort(it.value().begin(), it.value().end(), [](const FolderEntry &a, const FolderEntry &b) {
+            return folderOrder(a.role) < folderOrder(b.role);
+        });
     }
 
-    m_essentialCount = essentials.size();
-    m_folders = essentials + visibleCustoms;
+    // Sort customs in tree order: parents before children
+    for (auto it = customsByAccount.begin(); it != customsByAccount.end(); ++it) {
+        std::sort(it.value().begin(), it.value().end(), [](const FolderEntry &a, const FolderEntry &b) {
+            if (b.path.startsWith(a.path + QLatin1Char('/'))) return true;
+            if (a.path.startsWith(b.path + QLatin1Char('/'))) return false;
+            return a.path.toLower() < b.path.toLower();
+        });
+    }
+
+    // Filter custom folders: hide children whose parent is not expanded
+    QMap<int, QList<FolderEntry>> visibleCustoms;
+    for (auto it = customsByAccount.constBegin(); it != customsByAccount.constEnd(); ++it) {
+        for (const auto &entry : it.value()) {
+            int lastSep = entry.path.lastIndexOf(QLatin1Char('/'));
+            if (lastSep > 0) {
+                QString parentPath = entry.path.left(lastSep);
+                if (parentPath.startsWith(QLatin1Char('['))) {
+                    int closeBracket = parentPath.indexOf(QLatin1Char(']'));
+                    if (closeBracket >= 0 && closeBracket + 1 >= parentPath.size())
+                        parentPath.clear();
+                    else if (closeBracket >= 0 && closeBracket + 1 < parentPath.size() && parentPath[closeBracket + 1] == QLatin1Char('/'))
+                        parentPath = parentPath.mid(closeBracket + 2);
+                }
+                if (!parentPath.isEmpty() && !m_expanded.contains(parentPath))
+                    continue;
+            }
+            visibleCustoms[it.key()].append(entry);
+        }
+    }
+
+    // Assemble: account headers + their folders
+    QList<int> accountIds;
+    QSet<int> seen;
+    for (const auto &entry : std::as_const(m_rawFolders)) {
+        if (entry.noselect) continue;
+        if (!seen.contains(entry.accountId)) {
+            seen.insert(entry.accountId);
+            accountIds.append(entry.accountId);
+        }
+    }
+
+    for (int acid : accountIds) {
+        // Ensure first account is expanded by default
+        if (m_accountsExpanded.isEmpty())
+            m_accountsExpanded.insert(acid);
+
+        FolderEntry header;
+        header.accountId = acid;
+        header.isAccountHeader = true;
+        header.email = m_accountEmails.value(acid);
+        header.displayName = m_accountEmails.value(acid);
+        header.iconName = QStringLiteral("user");
+        header.isExpanded = m_accountsExpanded.contains(acid);
+        header.hasChildren = true;
+        header.unreadCount = 0;
+        header.depth = 0;
+        header.noselect = false;
+        header.role = FolderRole::Custom;
+        header.isEssential = false;
+        m_folders.append(header);
+
+        if (m_accountsExpanded.contains(acid)) {
+            for (const auto &entry : std::as_const(essentialsByAccount[acid]))
+                m_folders.append(entry);
+            for (const auto &entry : std::as_const(visibleCustoms[acid]))
+                m_folders.append(entry);
+        }
+    }
+
+    m_essentialCount = 0;
+    for (const auto &list : std::as_const(essentialsByAccount))
+        m_essentialCount += list.size();
 
     endResetModel();
     Q_EMIT countChanged();
@@ -300,45 +338,7 @@ void FolderModel::rebuildFlatList()
 
 void FolderModel::refreshForAccount(int accountId)
 {
-    m_rawFolders.clear();
-
-    QString dbPath = cacheDbPath();
-    if (!QFile::exists(dbPath)) {
-        rebuildFlatList();
-        return;
-    }
-
-    {
-        QSqlDatabase db = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), DB_CONN);
-        db.setDatabaseName(dbPath);
-        db.setConnectOptions(QStringLiteral("QSQLITE_OPEN_READONLY"));
-
-        if (!db.open()) {
-            qWarning() << "FolderModel: failed to open cache.db:" << db.lastError().text();
-            rebuildFlatList();
-            return;
-        }
-
-        QSqlQuery query(db);
-        query.prepare(QStringLiteral(
-            "SELECT account_id, path, unread_count FROM folders "
-            "WHERE account_id = ? ORDER BY path"));
-        query.addBindValue(accountId);
-
-        if (query.exec()) {
-            while (query.next()) {
-                RawFolder rf;
-                rf.accountId = query.value(0).toInt();
-                rf.path = query.value(1).toString();
-                rf.unreadCount = query.value(2).toInt();
-                m_rawFolders.append(rf);
-            }
-        }
-
-        db.close();
-    }
-    QSqlDatabase::removeDatabase(DB_CONN);
-
+    Q_UNUSED(accountId)
     rebuildFlatList();
 }
 
@@ -346,11 +346,18 @@ void FolderModel::toggleExpanded(int row)
 {
     if (row < 0 || row >= m_folders.size()) return;
     const auto &entry = m_folders.at(row);
-    if (!entry.hasChildren) return;
-    if (m_expanded.contains(entry.path))
-        m_expanded.remove(entry.path);
-    else
-        m_expanded.insert(entry.path);
+
+    if (entry.isAccountHeader) {
+        if (m_accountsExpanded.contains(entry.accountId))
+            m_accountsExpanded.remove(entry.accountId);
+        else
+            m_accountsExpanded.insert(entry.accountId);
+    } else if (entry.hasChildren) {
+        if (m_expanded.contains(entry.path))
+            m_expanded.remove(entry.path);
+        else
+            m_expanded.insert(entry.path);
+    }
     rebuildFlatList();
 }
 
@@ -367,16 +374,18 @@ QVariant FolderModel::data(const QModelIndex &index, int role) const
 
     const auto &entry = m_folders.at(index.row());
     switch (role) {
-    case AccountIdRole:    return entry.accountId;
-    case PathRole:         return entry.path;
-    case UnreadCountRole:  return entry.unreadCount;
-    case DepthRole:        return entry.depth;
-    case HasChildrenRole:  return entry.hasChildren;
-    case IsExpandedRole:   return m_expanded.contains(entry.path);
-    case DisplayNameRole:  return entry.displayName;
-    case IconNameRole:     return entry.iconName;
-    case RoleRole:         return static_cast<int>(entry.role);
-    case IsEssentialRole:  return entry.isEssential;
+    case AccountIdRole:        return entry.accountId;
+    case PathRole:             return entry.path;
+    case UnreadCountRole:      return entry.unreadCount;
+    case DepthRole:            return entry.depth;
+    case HasChildrenRole:      return entry.hasChildren;
+    case IsExpandedRole:       return entry.isAccountHeader ? entry.isExpanded : m_expanded.contains(entry.path);
+    case IsAccountHeaderRole:  return entry.isAccountHeader;
+    case EmailRole:            return entry.email;
+    case DisplayNameRole:      return entry.displayName;
+    case IconNameRole:         return entry.iconName;
+    case RoleRole:             return static_cast<int>(entry.role);
+    case IsEssentialRole:      return entry.isEssential;
     }
     return {};
 }
@@ -384,25 +393,22 @@ QVariant FolderModel::data(const QModelIndex &index, int role) const
 QHash<int, QByteArray> FolderModel::roleNames() const
 {
     return {
-        { AccountIdRole,   "accountId" },
-        { PathRole,        "path" },
-        { UnreadCountRole, "unreadCount" },
-        { DepthRole,       "depth" },
-        { HasChildrenRole, "hasChildren" },
-        { IsExpandedRole,  "isExpanded" },
-        { DisplayNameRole, "displayName" },
-        { IconNameRole,    "iconName" },
-        { RoleRole,        "folderRole" },
-        { IsEssentialRole, "isEssential" },
+        { AccountIdRole,       "accountId" },
+        { PathRole,            "path" },
+        { UnreadCountRole,     "unreadCount" },
+        { DepthRole,           "depth" },
+        { HasChildrenRole,     "hasChildren" },
+        { IsExpandedRole,      "isExpanded" },
+        { IsAccountHeaderRole, "isAccountHeader" },
+        { EmailRole,           "email" },
+        { DisplayNameRole,     "displayName" },
+        { IconNameRole,        "iconName" },
+        { RoleRole,            "folderRole" },
+        { IsEssentialRole,     "isEssential" },
     };
 }
 
 int FolderModel::count() const
 {
     return m_folders.size();
-}
-
-int FolderModel::essentialCount() const
-{
-    return m_essentialCount;
 }

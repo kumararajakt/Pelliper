@@ -25,6 +25,10 @@ struct FolderEntry {
     int unreadCount;
     int depth;             // nesting level (0 = root)
     bool hasChildren;      // whether this folder has sub-folders
+    bool noselect;         // virtual folder that can't hold messages
+    bool isAccountHeader;  // this is an account section header
+    bool isExpanded;       // for account headers and folders with children
+    QString email;         // account email (only for account headers)
     QString displayName;   // last path component, prettified
     QString iconName;      // KDE/Breeze icon name
     FolderRole role;       // essential or custom
@@ -38,7 +42,6 @@ class FolderModel : public QAbstractListModel
     QML_SINGLETON
 
     Q_PROPERTY(int count READ count NOTIFY countChanged)
-    Q_PROPERTY(int essentialCount READ essentialCount NOTIFY countChanged)
 
 public:
     enum Roles {
@@ -48,6 +51,8 @@ public:
         DepthRole,
         HasChildrenRole,
         IsExpandedRole,
+        IsAccountHeaderRole,
+        EmailRole,
         DisplayNameRole,
         IconNameRole,
         RoleRole,
@@ -61,7 +66,6 @@ public:
     QHash<int, QByteArray> roleNames() const override;
 
     int count() const;
-    int essentialCount() const;
 
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void refreshForAccount(int accountId);
@@ -88,17 +92,22 @@ private:
         int accountId;
         QString path;
         int unreadCount;
+        bool noselect;
     };
     QList<RawFolder> m_rawFolders;
 
-    // The flat list shown to QML (sorted by role, then alphabetically)
+    // Account emails keyed by id
+    QMap<int, QString> m_accountEmails;
+
+    // The flat list shown to QML
     QList<FolderEntry> m_folders;
 
     int m_essentialCount = 0;
 
     // Expand/collapse state
-    QSet<QString> m_expanded;      // paths that are expanded
-    QSet<QString> m_hasChildren;   // paths that have sub-folders
+    QSet<QString> m_expanded;      // folder paths that are expanded
+    QSet<QString> m_hasChildren;   // folder paths that have sub-folders
+    QSet<int> m_accountsExpanded;  // account IDs whose sections are expanded
 
     QFileSystemWatcher m_watcher;
     QTimer m_refreshTimer;
