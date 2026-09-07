@@ -64,6 +64,86 @@ Kirigami.Page {
             Layout.fillWidth: true
         }
 
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Kirigami.Units.smallSpacing
+
+            Controls.ToolButton {
+                id: boldBtn
+                text: "B"
+                font.weight: Font.Bold
+                checkable: true
+                checked: bodyField.cursorSelection.font.bold
+                onToggled: bodyField.cursorSelection.font.bold = checked
+                Controls.ToolTip.text: qsTr("Bold")
+                Controls.ToolTip.visible: hovered
+            }
+            Controls.ToolButton {
+                id: italicBtn
+                text: "I"
+                font.italic: true
+                checkable: true
+                checked: bodyField.cursorSelection.font.italic
+                onToggled: bodyField.cursorSelection.font.italic = checked
+                Controls.ToolTip.text: qsTr("Italic")
+                Controls.ToolTip.visible: hovered
+            }
+            Controls.ToolButton {
+                id: underlineBtn
+                text: "U"
+                font.underline: true
+                checkable: true
+                checked: bodyField.cursorSelection.font.underline
+                onToggled: bodyField.cursorSelection.font.underline = checked
+                Controls.ToolTip.text: qsTr("Underline")
+                Controls.ToolTip.visible: hovered
+            }
+            Controls.ToolButton {
+                id: strikeoutBtn
+                text: "S"
+                font.strikeout: true
+                checkable: true
+                checked: bodyField.cursorSelection.font.strikeout
+                onToggled: bodyField.cursorSelection.font.strikeout = checked
+                Controls.ToolTip.text: qsTr("Strikethrough")
+                Controls.ToolTip.visible: hovered
+            }
+
+            Item { Layout.fillWidth: true }
+
+            Controls.ToolButton {
+                icon.name: "format-indent-more"
+                checkable: true
+                checked: bodyField.cursorSelection.alignment === Qt.AlignRight
+                onToggled: bodyField.cursorSelection.alignment = checked
+                    ? Qt.AlignRight
+                    : Qt.AlignLeft
+                Controls.ToolTip.text: qsTr("Right align")
+                Controls.ToolTip.visible: hovered
+            }
+        }
+
+        Shortcut {
+            sequence: "Ctrl+B"
+            enabled: bodyField.activeFocus
+            onActivated: boldBtn.toggle()
+        }
+        Shortcut {
+            sequence: "Ctrl+I"
+            enabled: bodyField.activeFocus
+            onActivated: italicBtn.toggle()
+        }
+        Shortcut {
+            sequence: "Ctrl+U"
+            enabled: bodyField.activeFocus
+            onActivated: underlineBtn.toggle()
+        }
+        Shortcut {
+            sequence: "Ctrl+S"
+            enabled: bodyField.activeFocus
+            onActivated: strikeoutBtn.toggle()
+        }
+
         Controls.ScrollView {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -73,6 +153,9 @@ Kirigami.Page {
                 placeholderText: qsTr("Write your message...")
                 text: root.body
                 wrapMode: Text.Wrap
+                textFormat: Qt.AutoText
+                selectByMouse: true
+                persistentSelection: true
             }
         }
 
