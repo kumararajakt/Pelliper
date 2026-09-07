@@ -14,6 +14,8 @@ Kirigami.Page {
     property string subject: ""
     property string body: ""
     property bool sending: false
+    property string replyFolderPath: ""
+    property int replyUid: 0
 
     readonly property string accountName: {
         if (root.accountId < 0) return ""
@@ -26,6 +28,57 @@ Kirigami.Page {
         root.cc = ""
         root.subject = subject || ""
         root.body = body || ""
+        root.replyFolderPath = ""
+        root.replyUid = 0
+    }
+
+    function cleanSubject(subject) {
+        var s = subject || ""
+        s = s.replace(/^\s*(re|fwd|fw|aw|sv|antw|re\[[0-9]+\])\s*:\s*/i, "")
+        return s
+    }
+
+    function formatDate(epochSeconds) {
+        if (!epochSeconds) return ""
+        var d = new Date(epochSeconds * 1000)
+        return Qt.formatDateTime(d, "ddd MMM d, yyyy 'at' hh:mm")
+    }
+
+    function buildQuote(sender, date, bodyHtml) {
+        var sb = []
+        sb.push("<p>On " + root.formatDate(date) + ", " + escapedSender(sender) + " wrote:</p>")
+        sb.push("<blockquote>" + (bodyHtml || "") + "</blockquote>")
+        return sb.join("\n")
+    }
+
+    function escapedSender(sender) {
+        return String(sender).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    }
+
+    function openReply(accountId, folderPath, uid, subject, sender, date, bodyHtml) {
+        root.accountId = accountId
+        root.to = sender || ""
+        root.cc = ""
+        root.subject = "Re: " + root.cleanSubject(subject)
+        root.body = root.buildQuote(sender, date, bodyHtml)
+        root.replyFolderPath = folderPath || ""
+        root.replyUid = uid
+    }
+
+    function openForward(accountId, folderPath, uid, subject, sender, date, bodyHtml) {
+        root.accountId = accountId
+        root.to = ""
+        root.cc = ""
+        root.subject = "Fwd: " + root.cleanSubject(subject)
+        var sb = []
+        sb.push("<div>---------- Forwarded message ----------</div>")
+        sb.push("<div>From: " + root.escapedSender(sender) + "</div>")
+        if (root.formatDate(date)) sb.push("<div>Date: " + root.formatDate(date) + "</div>")
+        sb.push("<div>Subject: " + String(subject).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") + "</div>")
+        sb.push("<blockquote>" + (bodyHtml || "") + "</blockquote>")
+        root.body = sb.join("\n")
+        root.replyFolderPath = folderPath || ""
+        root.replyUid = uid
     }
 
     Controls.BusyIndicator {
@@ -190,7 +243,9 @@ Kirigami.Page {
                         toField.text,
                         ccField.text,
                         subjectField.text,
-                        bodyField.text
+                        bodyField.text,
+                        root.replyFolderPath,
+                        root.replyUid
                     )
                 }
             }

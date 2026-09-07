@@ -52,6 +52,12 @@ Kirigami.Page {
         ComposePage {}
     }
 
+    function openCompose(accountId, to, subject, body) {
+        var page = composePageComponent.createObject(applicationWindow())
+        page.openTo(accountId, to, subject, body)
+        applicationWindow().pageStack.layers.push(page)
+    }
+
     Component {
         id: searchPageComponent
         SearchPage {
@@ -202,6 +208,18 @@ Kirigami.Page {
             id: messageView
             Controls.SplitView.fillWidth: true
             Controls.SplitView.minimumWidth: Kirigami.Units.gridUnit * 25
+
+            onReplyRequested: function (accountId, folderPath, uid, subject, sender, date, bodyHtml) {
+                var page = composePageComponent.createObject(applicationWindow())
+                page.openReply(accountId, folderPath, uid, subject, sender, date, bodyHtml)
+                applicationWindow().pageStack.layers.push(page)
+            }
+
+            onForwardRequested: function (accountId, folderPath, uid, subject, sender, date, bodyHtml) {
+                var page = composePageComponent.createObject(applicationWindow())
+                page.openForward(accountId, folderPath, uid, subject, sender, date, bodyHtml)
+                applicationWindow().pageStack.layers.push(page)
+            }
         }
     }
 }

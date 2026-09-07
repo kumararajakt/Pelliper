@@ -47,7 +47,9 @@ public:
         const QString &to,
         const QString &cc,
         const QString &subject,
-        const QString &body
+        const QString &body,
+        const QString &replyFolderPath = QString(),
+        qint64 replyUid = 0
     );
 
 Q_SIGNALS:

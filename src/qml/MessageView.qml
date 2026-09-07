@@ -8,6 +8,11 @@ import org.kde.pelliper as Pelliper
 Kirigami.Page {
     id: messageView
 
+    signal replyRequested(int accountId, string folderPath, int uid,
+                          string subject, string sender, real date, string bodyHtml)
+    signal forwardRequested(int accountId, string folderPath, int uid,
+                            string subject, string sender, real date, string bodyHtml)
+
     property string bodyHtml: ""
     property string subject: ""
     property string sender: ""
@@ -76,6 +81,30 @@ Kirigami.Page {
                 Layout.fillWidth: true
                 spacing: Kirigami.Units.smallSpacing
 
+                Controls.ToolButton {
+                    icon.name: "mail-reply-sender"
+                    Controls.ToolTip.text: qsTr("Reply")
+                    Controls.ToolTip.visible: hovered
+                    onClicked: {
+                        messageView.replyRequested(
+                            messageView.accountId, messageView.folderPath,
+                            messageView.currentUid, messageView.subject,
+                            messageView.sender, messageView.messageDate,
+                            messageView.bodyHtml)
+                    }
+                }
+                Controls.ToolButton {
+                    icon.name: "mail-forward"
+                    Controls.ToolTip.text: qsTr("Forward")
+                    Controls.ToolTip.visible: hovered
+                    onClicked: {
+                        messageView.forwardRequested(
+                            messageView.accountId, messageView.folderPath,
+                            messageView.currentUid, messageView.subject,
+                            messageView.sender, messageView.messageDate,
+                            messageView.bodyHtml)
+                    }
+                }
                 Controls.ToolButton {
                     icon.name: messageView.isStarred ? "starred-symbolic" : "non-starred-symbolic"
                     Controls.ToolTip.text: messageView.isStarred ? qsTr("Unstar") : qsTr("Star")
