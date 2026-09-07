@@ -132,7 +132,7 @@ Kirigami.Page {
             Controls.SplitView.preferredWidth: Kirigami.Units.gridUnit * 30
             Controls.SplitView.minimumWidth: Kirigami.Units.gridUnit * 20
 
-            onMessageSelected: function (accountId, folderPath, uid, subject, sender, date) {
+            onMessageSelected: function (accountId, folderPath, uid, subject, sender, date, isRead, isStarred) {
                 selectedAccountId = accountId;
                 selectedFolderPath = folderPath;
                 selectedUid = uid;
@@ -140,10 +140,19 @@ Kirigami.Page {
                 messageView.subject = subject || "";
                 messageView.sender = sender || "";
                 messageView.messageDate = date || 0;
+                messageView.accountId = accountId;
+                messageView.folderPath = folderPath;
+                messageView.isRead = isRead;
+                messageView.isStarred = isStarred;
 
                 messageView.bodyHtml = "";
                 messageView.currentUid = uid;
                 Pelliper.DaemonClient.loadBody(accountId, folderPath, uid);
+
+                if (!isRead) {
+                    messageView.isRead = true;
+                    Pelliper.DaemonClient.setMessageRead(accountId, folderPath, uid, true);
+                }
             }
         }
 

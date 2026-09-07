@@ -179,6 +179,39 @@ void DaemonClient::setIdleFolder(qint64 accountId, const QString &folderPath)
     QDBusConnection::sessionBus().asyncCall(msg);
 }
 
+void DaemonClient::setMessageRead(qint64 accountId, const QString &folderPath, qint64 uid, bool read)
+{
+    if (!m_available) return;
+
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        SERVICE, PATH, INTERFACE, QStringLiteral("SetMessageRead"));
+    msg.setArguments({QVariant::fromValue(accountId), folderPath, QVariant::fromValue(uid), read});
+
+    QDBusConnection::sessionBus().asyncCall(msg);
+}
+
+void DaemonClient::setMessageStarred(qint64 accountId, const QString &folderPath, qint64 uid, bool starred)
+{
+    if (!m_available) return;
+
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        SERVICE, PATH, INTERFACE, QStringLiteral("SetMessageStarred"));
+    msg.setArguments({QVariant::fromValue(accountId), folderPath, QVariant::fromValue(uid), starred});
+
+    QDBusConnection::sessionBus().asyncCall(msg);
+}
+
+void DaemonClient::moveMessage(qint64 accountId, const QString &folderPath, qint64 uid, const QString &destFolder)
+{
+    if (!m_available) return;
+
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        SERVICE, PATH, INTERFACE, QStringLiteral("MoveMessage"));
+    msg.setArguments({QVariant::fromValue(accountId), folderPath, QVariant::fromValue(uid), destFolder});
+
+    QDBusConnection::sessionBus().asyncCall(msg);
+}
+
 void DaemonClient::loadBody(qint64 accountId, const QString &folderPath, qint64 uid)
 {
     if (!m_available) return;

@@ -13,6 +13,10 @@ Kirigami.Page {
     property string sender: ""
     property real messageDate: 0
     property int currentUid: -1
+    property int accountId: -1
+    property string folderPath: ""
+    property bool isRead: false
+    property bool isStarred: false
 
     Kirigami.PlaceholderMessage {
         anchors.centerIn: parent
@@ -68,6 +72,47 @@ Kirigami.Page {
                 }
             }
 
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Kirigami.Units.smallSpacing
+
+                Controls.ToolButton {
+                    icon.name: messageView.isStarred ? "starred-symbolic" : "non-starred-symbolic"
+                    Controls.ToolTip.text: messageView.isStarred ? qsTr("Unstar") : qsTr("Star")
+                    Controls.ToolTip.visible: hovered
+                    onClicked: {
+                        messageView.isStarred = !messageView.isStarred
+                        Pelliper.DaemonClient.setMessageStarred(
+                            messageView.accountId, messageView.folderPath,
+                            messageView.currentUid, messageView.isStarred)
+                    }
+                }
+                Controls.ToolButton {
+                    icon.name: messageView.isRead ? "mail-read" : "mail-unread"
+                    Controls.ToolTip.text: messageView.isRead ? qsTr("Mark unread") : qsTr("Mark read")
+                    Controls.ToolTip.visible: hovered
+                    onClicked: {
+                        messageView.isRead = !messageView.isRead
+                        Pelliper.DaemonClient.setMessageRead(
+                            messageView.accountId, messageView.folderPath,
+                            messageView.currentUid, messageView.isRead)
+                    }
+                }
+                Controls.ToolButton {
+                    icon.name: "user-trash"
+                    Controls.ToolTip.text: qsTr("Move to Trash")
+                    Controls.ToolTip.visible: hovered
+                    onClicked: {
+                        Pelliper.DaemonClient.moveMessage(
+                            messageView.accountId, messageView.folderPath,
+                            messageView.currentUid, "")
+                        messageView.clearMessage()
+                    }
+                }
+
+                Item { Layout.fillWidth: true }
+            }
+
             Kirigami.Separator {
                 Layout.fillWidth: true
                 Layout.topMargin: Kirigami.Units.smallSpacing
@@ -87,6 +132,16 @@ Kirigami.Page {
 
     onBodyHtmlChanged: loadBodyToView()
     onCurrentUidChanged: loadBodyToView()
+
+    function clearMessage() {
+        currentUid = -1
+        bodyHtml = ""
+        subject = ""
+        sender = ""
+        messageDate = 0
+        isRead = false
+        isStarred = false
+    }
 
     function loadBodyToView() {
         if (currentUid < 0 || bodyHtml === "") return

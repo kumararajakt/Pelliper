@@ -6,7 +6,7 @@ import org.kde.pelliper as Pelliper
 
 ColumnLayout {
 
-    signal messageSelected(int accountId, string folderPath, int uid, string subject, string sender, real date)
+    signal messageSelected(int accountId, string folderPath, int uid, string subject, string sender, real date, bool isRead, bool isStarred)
 
     property bool threaded: true
 
@@ -193,7 +193,7 @@ ColumnLayout {
 
             onClicked: {
                 threadList.currentIndex = index
-                messageSelected(threadDelegate.accountId, threadDelegate.folderPath, threadDelegate.uid, threadDelegate.subject, threadDelegate.sender, threadDelegate.date)
+                messageSelected(threadDelegate.accountId, threadDelegate.folderPath, threadDelegate.uid, threadDelegate.subject, threadDelegate.sender, threadDelegate.date, threadDelegate.isRead, threadDelegate.isStarred)
             }
         }
     }
@@ -301,7 +301,7 @@ ColumnLayout {
 
             onClicked: {
                 messageList.currentIndex = index
-                messageSelected(msgDelegate.accountId, msgDelegate.folderPath, msgDelegate.uid, msgDelegate.subject, msgDelegate.sender, msgDelegate.date)
+                messageSelected(msgDelegate.accountId, msgDelegate.folderPath, msgDelegate.uid, msgDelegate.subject, msgDelegate.sender, msgDelegate.date, msgDelegate.isRead, msgDelegate.isStarred)
             }
         }
     }
