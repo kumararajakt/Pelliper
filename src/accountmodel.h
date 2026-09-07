@@ -44,6 +44,12 @@ public:
     /// Return the first account's email, or empty string if none.
     Q_INVOKABLE QString firstAccountEmail() const;
 
+    /// Return the first account's id, or -1 if none.
+    Q_INVOKABLE int firstAccountId() const;
+
+    /// Return a display label (\"Display Name <email>\") for the account, or empty if not found.
+    Q_INVOKABLE QString accountLabelForId(int accountId) const;
+
 Q_SIGNALS:
     void countChanged();
 

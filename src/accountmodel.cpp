@@ -107,3 +107,21 @@ QString AccountModel::firstAccountEmail() const
 {
     return m_accounts.isEmpty() ? QString() : m_accounts.first().email;
 }
+
+int AccountModel::firstAccountId() const
+{
+    return m_accounts.isEmpty() ? -1 : m_accounts.first().id;
+}
+
+QString AccountModel::accountLabelForId(int accountId) const
+{
+    for (const auto &entry : m_accounts) {
+        if (entry.id == accountId) {
+            if (!entry.displayName.isEmpty()) {
+                return entry.displayName + QStringLiteral(" <") + entry.email + QLatin1Char('>');
+            }
+            return entry.email;
+        }
+    }
+    return QString();
+}

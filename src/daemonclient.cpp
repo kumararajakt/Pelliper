@@ -219,6 +219,35 @@ void DaemonClient::removeAccount(qint64 accountId)
     });
 }
 
+void DaemonClient::sendEmail(
+    qint64 accountId,
+    const QString &to,
+    const QString &cc,
+    const QString &subject,
+    const QString &body
+)
+{
+    if (!m_available) return;
+
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        SERVICE, PATH, INTERFACE, QStringLiteral("SendEmail"));
+    msg.setArguments({
+        QVariant::fromValue(accountId),
+        to,
+        cc,
+        subject,
+        body
+    });
+
+    QDBusPendingCall call = QDBusConnection::sessionBus().asyncCall(msg);
+    auto *watcher = new QDBusPendingCallWatcher(call, this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher]() {
+        QDBusPendingReply<QString> reply = *watcher;
+        watcher->deleteLater();
+        Q_EMIT emailSent(reply.isError() ? reply.error().message() : reply.value());
+    });
+}
+
 void DaemonClient::onGenericReply(QDBusPendingCallWatcher *watcher, const QString &signal)
 {
     QDBusPendingReply<QString> reply = *watcher;

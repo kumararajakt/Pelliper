@@ -39,6 +39,13 @@ public:
     Q_INVOKABLE void setIdleFolder(qint64 accountId, const QString &folderPath);
     Q_INVOKABLE void loadBody(qint64 accountId, const QString &folderPath, qint64 uid);
     Q_INVOKABLE void removeAccount(qint64 accountId);
+    Q_INVOKABLE void sendEmail(
+        qint64 accountId,
+        const QString &to,
+        const QString &cc,
+        const QString &subject,
+        const QString &body
+    );
 
 Q_SIGNALS:
     void availableChanged();
@@ -51,6 +58,7 @@ Q_SIGNALS:
     void syncAllFinished(bool success);
     void bodyLoaded(qint64 uid, const QString &html);
     void accountRemoved(qint64 accountId);
+    void emailSent(const QString &error);
 
 private Q_SLOTS:
     void onAddAccountReply(QDBusPendingCallWatcher *watcher);

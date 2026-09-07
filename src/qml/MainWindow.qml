@@ -47,7 +47,25 @@ Kirigami.Page {
         }
     }
 
+    Component {
+        id: composePageComponent
+        ComposePage {}
+    }
+
     actions: [
+        Kirigami.Action {
+            text: qsTr("Compose")
+            icon.name: "mail-new"
+            onTriggered: {
+                var accountId = mainPage.selectedAccountId
+                if (accountId < 0) {
+                    accountId = Pelliper.AccountModel.firstAccountId()
+                }
+                var page = composePageComponent.createObject(applicationWindow())
+                page.openTo(accountId)
+                applicationWindow().pageStack.layers.push(page)
+            }
+        },
         Kirigami.Action {
             text: qsTr("Settings")
             icon.name: "configure"
