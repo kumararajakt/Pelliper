@@ -52,6 +52,40 @@ Kirigami.Page {
         ComposePage {}
     }
 
+    Component {
+        id: searchPageComponent
+        SearchPage {
+            onOpenMessage: function (accountId, folderPath, uid, subject, sender, date) {
+                applicationWindow().pageStack.layers.pop()
+                mainPage.openMessageInView(accountId, folderPath, uid, subject, sender, date)
+            }
+        }
+    }
+
+    function openMessageInView(accountId, folderPath, uid, subject, sender, date) {
+        mainPage.selectedAccountId = accountId
+        mainPage.selectedFolderPath = folderPath
+        mainPage.selectedUid = uid
+
+        Pelliper.MessageModel.accountId = accountId
+        Pelliper.MessageModel.folderPath = folderPath
+        Pelliper.ThreadModel.accountId = accountId
+        Pelliper.ThreadModel.folderPath = folderPath
+        Pelliper.DaemonClient.setIdleFolder(accountId, folderPath)
+
+        messageView.subject = subject || ""
+        messageView.sender = sender || ""
+        messageView.messageDate = date || 0
+        messageView.accountId = accountId
+        messageView.folderPath = folderPath
+        messageView.isRead = true
+        messageView.isStarred = false
+        messageView.bodyHtml = ""
+        messageView.currentUid = uid
+        Pelliper.DaemonClient.loadBody(accountId, folderPath, uid)
+        Pelliper.DaemonClient.setMessageRead(accountId, folderPath, uid, true)
+    }
+
     actions: [
         Kirigami.Action {
             text: qsTr("Compose")
@@ -64,6 +98,14 @@ Kirigami.Page {
                 var page = composePageComponent.createObject(applicationWindow())
                 page.openTo(accountId)
                 applicationWindow().pageStack.layers.push(page)
+            }
+        },
+        Kirigami.Action {
+            text: qsTr("Search")
+            icon.name: "system-search"
+            shortcut: "Ctrl+F"
+            onTriggered: {
+                applicationWindow().pageStack.layers.push(searchPageComponent)
             }
         },
         Kirigami.Action {

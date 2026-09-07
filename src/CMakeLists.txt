@@ -26,6 +26,8 @@ target_sources(pelliper
     messagemodel.h
     threadmodel.cpp
     threadmodel.h
+    searchmodel.cpp
+    searchmodel.h
 )
 
 ecm_target_qml_sources(pelliper
@@ -38,6 +40,7 @@ ecm_target_qml_sources(pelliper
     qml/MessageListView.qml
     qml/MessageView.qml
     qml/SettingsPage.qml
+    qml/SearchPage.qml
 )
 
 target_link_libraries(pelliper
