@@ -21,6 +21,7 @@ int main(int argc, char *argv[])
     QApplication::setDesktopFileName(QStringLiteral("pelliper"));
 
     QApplication::setStyle(QStringLiteral("breeze"));
+    QApplication::setQuitOnLastWindowClosed(false);
     if (qEnvironmentVariableIsEmpty("QT_QUICK_CONTROLS_STYLE")) {
         QQuickStyle::setStyle(QStringLiteral("org.kde.desktop"));
     }

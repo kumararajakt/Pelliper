@@ -28,6 +28,8 @@ target_sources(pelliper
     threadmodel.h
     searchmodel.cpp
     searchmodel.h
+    traynotifier.cpp
+    traynotifier.h
 )
 
 ecm_target_qml_sources(pelliper
@@ -58,6 +60,7 @@ target_link_libraries(pelliper
     KF6::I18nQml
     KF6::CoreAddons
     KF6::IconThemes
+    KF6::StatusNotifierItem
 )
 
 add_dependencies(pelliper pelliper_daemon)

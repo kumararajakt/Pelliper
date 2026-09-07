@@ -57,6 +57,41 @@ Kirigami.ApplicationWindow {
         }
     }
 
+    onClosing: function (close) {
+        close.accepted = false
+        root.hide()
+    }
+
+    function openMessageFromExternal(accountId, folderPathString, uid, subject, sender, date) {
+        if (Pelliper.AccountModel.count <= 0)
+            return
+        var currentPage = root.pageStack.currentItem
+        if (!currentPage || typeof currentPage.openMessageInView !== "function") {
+            root.pageStack.clear()
+            root.pageStack.push(mainWindowComponent)
+        }
+        if (root.pageStack.layers.depth > 1) {
+            root.pageStack.layers.clear()
+        }
+        root.pageStack.currentItem.openMessageInView(
+            accountId, folderPathString, uid, subject, sender, date)
+        root.show()
+        root.raise()
+        root.requestActivate()
+    }
+
+    Connections {
+        target: Pelliper.TrayNotifier
+        function onOpenMessage(accountId, folderPathString, uid, subject, sender, date) {
+            root.openMessageFromExternal(accountId, folderPathString, uid, subject, sender, date)
+        }
+        function onShowWindow() {
+            root.show()
+            root.raise()
+            root.requestActivate()
+        }
+    }
+
     Connections {
         target: Pelliper.DaemonClient
         function onAccountAdded(email) {
