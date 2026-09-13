@@ -202,6 +202,18 @@ Kirigami.Page {
                     Pelliper.DaemonClient.setMessageRead(accountId, folderPath, uid, true);
                 }
             }
+
+            onReplyRequested: function (accountId, folderPath, uid, subject, sender, date, isRead, isStarred) {
+                var page = composePageComponent.createObject(applicationWindow())
+                page.openReply(accountId, folderPath, uid, subject, sender, date, "")
+                applicationWindow().pageStack.layers.push(page)
+            }
+
+            onForwardRequested: function (accountId, folderPath, uid, subject, sender, date, isRead, isStarred) {
+                var page = composePageComponent.createObject(applicationWindow())
+                page.openForward(accountId, folderPath, uid, subject, sender, date, "")
+                applicationWindow().pageStack.layers.push(page)
+            }
         }
 
         MessageView {

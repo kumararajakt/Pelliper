@@ -7,6 +7,8 @@ import org.kde.pelliper as Pelliper
 ColumnLayout {
 
     signal messageSelected(int accountId, string folderPath, int uid, string subject, string sender, real date, bool isRead, bool isStarred)
+    signal replyRequested(int accountId, string folderPath, int uid, string subject, string sender, real date, bool isRead, bool isStarred)
+    signal forwardRequested(int accountId, string folderPath, int uid, string subject, string sender, real date, bool isRead, bool isStarred)
 
     property bool threaded: true
 
@@ -253,6 +255,56 @@ ColumnLayout {
                 threadList.currentIndex = index
                 messageSelected(threadDelegate.accountId, threadDelegate.folderPath, threadDelegate.uid, threadDelegate.subject, threadDelegate.sender, threadDelegate.date, threadDelegate.isRead, threadDelegate.isStarred)
             }
+
+            Controls.Menu {
+                id: threadContextMenu
+
+                Controls.MenuItem {
+                    text: qsTr("Reply")
+                    icon.name: "mail-reply-sender"
+                    onTriggered: replyRequested(threadDelegate.accountId, threadDelegate.folderPath, threadDelegate.uid, threadDelegate.subject, threadDelegate.sender, threadDelegate.date, threadDelegate.isRead, threadDelegate.isStarred)
+                }
+                Controls.MenuItem {
+                    text: qsTr("Forward")
+                    icon.name: "mail-forward"
+                    onTriggered: forwardRequested(threadDelegate.accountId, threadDelegate.folderPath, threadDelegate.uid, threadDelegate.subject, threadDelegate.sender, threadDelegate.date, threadDelegate.isRead, threadDelegate.isStarred)
+                }
+
+                Controls.MenuSeparator {}
+
+                Controls.MenuItem {
+                    text: threadDelegate.isRead ? qsTr("Mark as Unread") : qsTr("Mark as Read")
+                    icon.name: threadDelegate.isRead ? "mail-unread" : "mail-read"
+                    onTriggered: {
+                        threadDelegate.isRead = !threadDelegate.isRead
+                        Pelliper.DaemonClient.setMessageRead(threadDelegate.accountId, threadDelegate.folderPath, threadDelegate.uid, threadDelegate.isRead)
+                    }
+                }
+                Controls.MenuItem {
+                    text: threadDelegate.isStarred ? qsTr("Unstar") : qsTr("Star")
+                    icon.name: threadDelegate.isStarred ? "non-starred-symbolic" : "starred-symbolic"
+                    onTriggered: {
+                        threadDelegate.isStarred = !threadDelegate.isStarred
+                        Pelliper.DaemonClient.setMessageStarred(threadDelegate.accountId, threadDelegate.folderPath, threadDelegate.uid, threadDelegate.isStarred)
+                    }
+                }
+
+                Controls.MenuSeparator {}
+
+                Controls.MenuItem {
+                    text: qsTr("Move to Trash")
+                    icon.name: "user-trash"
+                    onTriggered: Pelliper.DaemonClient.deleteMessage(threadDelegate.accountId, threadDelegate.folderPath, threadDelegate.uid)
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.RightButton
+                onClicked: function(mouse) {
+                    threadContextMenu.popup(mouse.x, mouse.y)
+                }
+            }
         }
     }
 
@@ -379,6 +431,56 @@ ColumnLayout {
             onClicked: {
                 messageList.currentIndex = index
                 messageSelected(msgDelegate.accountId, msgDelegate.folderPath, msgDelegate.uid, msgDelegate.subject, msgDelegate.sender, msgDelegate.date, msgDelegate.isRead, msgDelegate.isStarred)
+            }
+
+            Controls.Menu {
+                id: msgContextMenu
+
+                Controls.MenuItem {
+                    text: qsTr("Reply")
+                    icon.name: "mail-reply-sender"
+                    onTriggered: replyRequested(msgDelegate.accountId, msgDelegate.folderPath, msgDelegate.uid, msgDelegate.subject, msgDelegate.sender, msgDelegate.date, msgDelegate.isRead, msgDelegate.isStarred)
+                }
+                Controls.MenuItem {
+                    text: qsTr("Forward")
+                    icon.name: "mail-forward"
+                    onTriggered: forwardRequested(msgDelegate.accountId, msgDelegate.folderPath, msgDelegate.uid, msgDelegate.subject, msgDelegate.sender, msgDelegate.date, msgDelegate.isRead, msgDelegate.isStarred)
+                }
+
+                Controls.MenuSeparator {}
+
+                Controls.MenuItem {
+                    text: msgDelegate.isRead ? qsTr("Mark as Unread") : qsTr("Mark as Read")
+                    icon.name: msgDelegate.isRead ? "mail-unread" : "mail-read"
+                    onTriggered: {
+                        msgDelegate.isRead = !msgDelegate.isRead
+                        Pelliper.DaemonClient.setMessageRead(msgDelegate.accountId, msgDelegate.folderPath, msgDelegate.uid, msgDelegate.isRead)
+                    }
+                }
+                Controls.MenuItem {
+                    text: msgDelegate.isStarred ? qsTr("Unstar") : qsTr("Star")
+                    icon.name: msgDelegate.isStarred ? "non-starred-symbolic" : "starred-symbolic"
+                    onTriggered: {
+                        msgDelegate.isStarred = !msgDelegate.isStarred
+                        Pelliper.DaemonClient.setMessageStarred(msgDelegate.accountId, msgDelegate.folderPath, msgDelegate.uid, msgDelegate.isStarred)
+                    }
+                }
+
+                Controls.MenuSeparator {}
+
+                Controls.MenuItem {
+                    text: qsTr("Move to Trash")
+                    icon.name: "user-trash"
+                    onTriggered: Pelliper.DaemonClient.deleteMessage(msgDelegate.accountId, msgDelegate.folderPath, msgDelegate.uid)
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.RightButton
+                onClicked: function(mouse) {
+                    msgContextMenu.popup(mouse.x, mouse.y)
+                }
             }
         }
     }
