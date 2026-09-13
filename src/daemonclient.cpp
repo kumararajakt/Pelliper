@@ -4,6 +4,7 @@
 #include <QDBusMessage>
 #include <QDBusPendingCall>
 #include <QDBusPendingReply>
+#include <QFile>
 
 static const QString SERVICE = QStringLiteral("org.kde.pelliper.Daemon");
 static const QString PATH = QStringLiteral("/org/kde/pelliper/Daemon");
@@ -231,6 +232,38 @@ void DaemonClient::loadBody(qint64 accountId, const QString &folderPath, qint64 
             Q_EMIT bodyLoaded(uid, QStringLiteral("<p>Failed to load body</p>"));
         }
     });
+}
+
+void DaemonClient::listAttachments(qint64 accountId, const QString &folderPath, qint64 uid)
+{
+    if (!m_available) return;
+
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        SERVICE, PATH, INTERFACE, QStringLiteral("ListAttachments"));
+    msg.setArguments({QVariant::fromValue(accountId), folderPath, QVariant::fromValue(uid)});
+
+    QDBusPendingCall call = QDBusConnection::sessionBus().asyncCall(msg);
+    auto *watcher = new QDBusPendingCallWatcher(call, this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, uid]() {
+        QDBusPendingReply<QString> reply = *watcher;
+        watcher->deleteLater();
+        if (!reply.isError()) {
+            Q_EMIT attachmentsLoaded(uid, reply.value());
+        } else {
+            Q_EMIT attachmentsLoaded(uid, QStringLiteral("[]"));
+        }
+    });
+}
+
+bool DaemonClient::copyFile(const QString &srcPath, const QString &destPath)
+{
+    if (srcPath.isEmpty() || destPath.isEmpty()) {
+        return false;
+    }
+    if (srcPath == destPath) {
+        return true;
+    }
+    return QFile::copy(srcPath, destPath);
 }
 
 void DaemonClient::removeAccount(qint64 accountId)

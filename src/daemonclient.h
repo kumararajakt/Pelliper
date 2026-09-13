@@ -41,6 +41,8 @@ public:
     Q_INVOKABLE void setMessageStarred(qint64 accountId, const QString &folderPath, qint64 uid, bool starred);
     Q_INVOKABLE void moveMessage(qint64 accountId, const QString &folderPath, qint64 uid, const QString &destFolder);
     Q_INVOKABLE void loadBody(qint64 accountId, const QString &folderPath, qint64 uid);
+    Q_INVOKABLE void listAttachments(qint64 accountId, const QString &folderPath, qint64 uid);
+    Q_INVOKABLE bool copyFile(const QString &srcPath, const QString &destPath);
     Q_INVOKABLE void removeAccount(qint64 accountId);
     Q_INVOKABLE void sendEmail(
         qint64 accountId,
@@ -62,6 +64,7 @@ Q_SIGNALS:
     void messageCountLoaded(qint64 count);
     void syncAllFinished(bool success);
     void bodyLoaded(qint64 uid, const QString &html);
+    void attachmentsLoaded(qint64 uid, const QString &json);
     void accountRemoved(qint64 accountId);
     void emailSent(const QString &error);
 

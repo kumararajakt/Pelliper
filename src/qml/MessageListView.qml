@@ -137,11 +137,30 @@ ColumnLayout {
                         }
                     }
 
-                    Kirigami.Icon {
-                        source: "starred-symbolic"
-                        Layout.preferredWidth: 14
-                        Layout.preferredHeight: 14
-                        visible: threadDelegate.isStarred
+                    // Star toggle
+                    Item {
+                        Layout.preferredWidth: 18
+                        Layout.preferredHeight: 18
+
+                        Kirigami.Icon {
+                            anchors.fill: parent
+                            source: threadDelegate.isStarred ? "starred-symbolic" : "non-starred-symbolic"
+                            color: threadDelegate.isStarred ? Kirigami.Theme.highlightColor : Kirigami.Theme.disabledTextColor
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                threadDelegate.isStarred = !threadDelegate.isStarred
+                                Pelliper.DaemonClient.setMessageStarred(
+                                    threadDelegate.accountId,
+                                    threadDelegate.folderPath,
+                                    threadDelegate.uid,
+                                    threadDelegate.isStarred
+                                )
+                            }
+                        }
                     }
 
                     Kirigami.Icon {
@@ -245,11 +264,30 @@ ColumnLayout {
                         Layout.fillWidth: true
                     }
 
-                    Kirigami.Icon {
-                        source: "starred-symbolic"
-                        Layout.preferredWidth: 14
-                        Layout.preferredHeight: 14
-                        visible: msgDelegate.isStarred
+                    // Star toggle
+                    Item {
+                        Layout.preferredWidth: 18
+                        Layout.preferredHeight: 18
+
+                        Kirigami.Icon {
+                            anchors.fill: parent
+                            source: msgDelegate.isStarred ? "starred-symbolic" : "non-starred-symbolic"
+                            color: msgDelegate.isStarred ? Kirigami.Theme.highlightColor : Kirigami.Theme.disabledTextColor
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                msgDelegate.isStarred = !msgDelegate.isStarred
+                                Pelliper.DaemonClient.setMessageStarred(
+                                    msgDelegate.accountId,
+                                    msgDelegate.folderPath,
+                                    msgDelegate.uid,
+                                    msgDelegate.isStarred
+                                )
+                            }
+                        }
                     }
 
                     Kirigami.Icon {

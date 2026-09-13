@@ -23,16 +23,10 @@ OAuth2::OAuth2(QObject *parent)
 
 QVector<OAuthProvider> OAuth2::knownProviders()
 {
-    const QString googleClientId = qEnvironmentVariable(
-        "PELLIPER_GOOGLE_CLIENT_ID",
-        QStringLiteral("780679832751-ckm5ak0vjhl6f7uj1h8b0lp63tnb7b3j.apps.googleusercontent.com"));
-    const QString googleClientSecret = qEnvironmentVariable(
-        "PELLIPER_GOOGLE_CLIENT_SECRET");
-    const QString microsoftClientId = qEnvironmentVariable(
-        "PELLIPER_MICROSOFT_CLIENT_ID",
-        QStringLiteral("b34MasterKey-fake-for-dev"));
-    const QString microsoftClientSecret = qEnvironmentVariable(
-        "PELLIPER_MICROSOFT_CLIENT_SECRET");
+    const QString googleClientId = qEnvironmentVariable("PELLIPER_GOOGLE_CLIENT_ID");
+    const QString googleClientSecret = qEnvironmentVariable("PELLIPER_GOOGLE_CLIENT_SECRET");
+    const QString microsoftClientId = qEnvironmentVariable("PELLIPER_MICROSOFT_CLIENT_ID");
+    const QString microsoftClientSecret = qEnvironmentVariable("PELLIPER_MICROSOFT_CLIENT_SECRET");
 
     return {
         {
@@ -112,7 +106,7 @@ void OAuth2::startAuth()
         return;
     }
 
-    if (m_provider.clientId.contains(QLatin1String("fake-for-dev"))) {
+    if (m_provider.clientId.isEmpty() || m_provider.clientId.contains(QLatin1String("fake-for-dev"))) {
         Q_EMIT failed(tr("OAuth client ID not configured. Set PELLIPER_%1_CLIENT_ID environment variable.")
                        .arg(m_provider.id.toUpper()));
         return;
