@@ -260,7 +260,7 @@ Kirigami.Page {
             }
         }
 
-        WebEngineView {
+WebEngineView {
             id: webView
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -268,6 +268,13 @@ Kirigami.Page {
             settings.javascriptEnabled: false
             settings.localContentCanAccessRemoteUrls: false
             settings.localContentCanAccessFileUrls: false
+
+            onNavigationRequested: function(request) {
+                if (request.requestedUrl.toString().length > 0) {
+                    Qt.openUrlExternally(request.requestedUrl)
+                    request.action = WebEngineNavigationRequest.IgnoreRequest
+                }
+            }
         }
     }
 
