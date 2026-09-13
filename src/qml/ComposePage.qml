@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import QtQuick.Dialogs
+import QtCore
 import org.kde.kirigami as Kirigami
 import org.kde.pelliper as Pelliper
 
@@ -22,6 +23,11 @@ Kirigami.Page {
     readonly property string accountName: {
         if (root.accountId < 0) return ""
         return Pelliper.AccountModel.accountLabelForId(root.accountId)
+    }
+
+    Settings {
+        id: settings
+        category: "compose"
     }
 
     function openTo(accountId, to, subject, body) {
@@ -232,6 +238,23 @@ Kirigami.Page {
                     : Qt.AlignLeft
                 Controls.ToolTip.text: qsTr("Right align")
                 Controls.ToolTip.visible: hovered
+            }
+
+            Item { Layout.fillWidth: true }
+
+            Controls.ToolButton {
+                icon.name: "user-properties"
+                Controls.ToolTip.text: qsTr("Insert Signature")
+                Controls.ToolTip.visible: hovered
+                onClicked: {
+                    var sig = settings.value("signature", "")
+                    if (sig.length === 0) {
+                        applicationWindow().showPassiveNotification(qsTr("No signature configured. Set it in Settings."))
+                        return
+                    }
+                    var sep = bodyField.text.length > 0 ? "\n\n-- \n" : "-- \n"
+                    bodyField.text = bodyField.text + sep + sig
+                }
             }
         }
 

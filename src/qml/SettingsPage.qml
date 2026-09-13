@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
+import QtCore
 import org.kde.kirigami as Kirigami
 import org.kde.pelliper as Pelliper
 
@@ -11,6 +12,11 @@ Kirigami.Page {
 
     signal addAccountRequested()
     signal emptyStateRequested()
+
+    Settings {
+        id: settings
+        category: "compose"
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -92,6 +98,40 @@ Kirigami.Page {
             icon.name: "list-add-user"
             Layout.alignment: Qt.AlignLeft
             onClicked: settingsPage.addAccountRequested()
+        }
+
+        Kirigami.Separator {
+            Layout.fillWidth: true
+        }
+
+        Kirigami.Heading {
+            text: qsTr("Compose")
+            level: 2
+            Layout.fillWidth: true
+        }
+
+        Controls.Label {
+            text: qsTr("Signature")
+            font.pointSize: 11
+        }
+
+        Controls.TextArea {
+            id: sigField
+            Layout.fillWidth: true
+            Layout.preferredHeight: 100
+            text: settings.value("signature", "")
+            placeholderText: qsTr("Your email signature (appended to new messages)")
+            wrapMode: Text.Wrap
+        }
+
+        Controls.Button {
+            text: qsTr("Save Signature")
+            icon.name: "document-save"
+            Layout.alignment: Qt.AlignLeft
+            onClicked: {
+                settings.setValue("signature", sigField.text)
+                applicationWindow().showPassiveNotification(qsTr("Signature saved"))
+            }
         }
     }
 
