@@ -55,7 +55,8 @@ public:
         const QString &subject,
         const QString &body,
         const QString &replyFolderPath = QString(),
-        qint64 replyUid = 0
+        qint64 replyUid = 0,
+        const QString &attachmentPaths = QString()
     );
 
 Q_SIGNALS:

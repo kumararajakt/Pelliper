@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
+import QtQuick.Dialogs
 import org.kde.kirigami as Kirigami
 import org.kde.pelliper as Pelliper
 
@@ -16,6 +17,7 @@ Kirigami.Page {
     property bool sending: false
     property string replyFolderPath: ""
     property int replyUid: 0
+    property var attachments: []
 
     readonly property string accountName: {
         if (root.accountId < 0) return ""
@@ -30,6 +32,7 @@ Kirigami.Page {
         root.body = body || ""
         root.replyFolderPath = ""
         root.replyUid = 0
+        root.attachments = []
     }
 
     function cleanSubject(subject) {
@@ -212,16 +215,63 @@ Kirigami.Page {
             }
         }
 
+        // Attachment list
+        Repeater {
+            model: root.attachments
+            delegate: RowLayout {
+                Layout.fillWidth: true
+                Kirigami.Icon {
+                    source: "mail-attachment"
+                    Layout.preferredWidth: 16
+                    Layout.preferredHeight: 16
+                }
+                Controls.Label {
+                    text: modelData.name
+                    elide: Text.ElideRight
+                    Layout.fillWidth: true
+                }
+                Controls.Label {
+                    text: modelData.sizeLabel
+                    color: Kirigami.Theme.disabledTextColor
+                }
+                Controls.ToolButton {
+                    icon.name: "list-remove"
+                    onClicked: {
+                        var arr = root.attachments.slice()
+                        arr.splice(index, 1)
+                        root.attachments = arr
+                    }
+                }
+            }
+        }
+
+        FileDialog {
+            id: attachDialog
+            title: qsTr("Attach Files")
+            fileMode: FileDialog.OpenFiles
+            nameFilters: [qsTr("All Files (*)")]
+            onAccepted: {
+                var arr = root.attachments.slice()
+                for (var i = 0; i < selectedFiles.length; i++) {
+                    var url = selectedFiles[i]
+                    var path = url.toString()
+                    if (path.indexOf("file://") === 0) path = path.substring(7)
+                    var name = path.split("/").pop()
+                    var size = 0
+                    // size is unknown from FileDialog, pass 0
+                    arr.push({ path: path, name: name, size: 0, sizeLabel: "" })
+                }
+                root.attachments = arr
+            }
+        }
+
         RowLayout {
             Layout.fillWidth: true
 
             Controls.Button {
-                text: "Attach File"
+                text: qsTr("Attach File")
                 icon.name: "mail-attachment"
-                enabled: false
-                onClicked: {
-                    // TODO: file picker
-                }
+                onClicked: attachDialog.open()
             }
 
             Item { Layout.fillWidth: true }
@@ -238,6 +288,10 @@ Kirigami.Page {
                 enabled: toField.text.trim().length > 0 && !root.sending
                 onClicked: {
                     root.sending = true
+                    var paths = []
+                    for (var i = 0; i < root.attachments.length; i++) {
+                        paths.push(root.attachments[i].path)
+                    }
                     Pelliper.DaemonClient.sendEmail(
                         root.accountId,
                         toField.text,
@@ -245,7 +299,8 @@ Kirigami.Page {
                         subjectField.text,
                         bodyField.text,
                         root.replyFolderPath,
-                        root.replyUid
+                        root.replyUid,
+                        JSON.stringify(paths)
                     )
                 }
             }

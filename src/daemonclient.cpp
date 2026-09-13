@@ -336,7 +336,8 @@ void DaemonClient::sendEmail(
     const QString &subject,
     const QString &body,
     const QString &replyFolderPath,
-    qint64 replyUid
+    qint64 replyUid,
+    const QString &attachmentPaths
 )
 {
     if (!m_available) return;
@@ -350,7 +351,8 @@ void DaemonClient::sendEmail(
         subject,
         body,
         replyFolderPath,
-        QVariant::fromValue(replyUid)
+        QVariant::fromValue(replyUid),
+        attachmentPaths
     });
 
     QDBusPendingCall call = QDBusConnection::sessionBus().asyncCall(msg);
