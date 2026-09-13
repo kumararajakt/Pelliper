@@ -50,6 +50,9 @@ public:
     /// Return a display label (\"Display Name <email>\") for the account, or empty if not found.
     Q_INVOKABLE QString accountLabelForId(int accountId) const;
 
+    /// Return the account id at a given model index, or -1 if out of range.
+    Q_INVOKABLE int accountIdAt(int index) const;
+
 Q_SIGNALS:
     void countChanged();
 

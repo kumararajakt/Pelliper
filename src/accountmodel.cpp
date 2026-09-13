@@ -125,3 +125,9 @@ QString AccountModel::accountLabelForId(int accountId) const
     }
     return QString();
 }
+
+int AccountModel::accountIdAt(int index) const
+{
+    if (index < 0 || index >= m_accounts.size()) return -1;
+    return m_accounts.at(index).id;
+}

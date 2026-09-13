@@ -107,6 +107,41 @@ Kirigami.Page {
         }
 
         Kirigami.Heading {
+            text: qsTr("General")
+            level: 2
+            Layout.fillWidth: true
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            Controls.Label {
+                text: qsTr("Default compose account")
+                Layout.fillWidth: true
+            }
+            Controls.ComboBox {
+                id: defaultAccountCombo
+                model: Pelliper.AccountModel
+                textRole: "email"
+                Component.onCompleted: {
+                    var savedId = settings.value("defaultAccountId", -1)
+                    for (var i = 0; i < count; i++) {
+                        if (model.accountIdAt(i) === savedId) {
+                            currentIndex = i
+                            return
+                        }
+                    }
+                }
+                onActivated: {
+                    settings.setValue("defaultAccountId", model.accountIdAt(currentIndex))
+                }
+            }
+        }
+
+        Kirigami.Separator {
+            Layout.fillWidth: true
+        }
+
+        Kirigami.Heading {
             text: qsTr("Compose")
             level: 2
             Layout.fillWidth: true
