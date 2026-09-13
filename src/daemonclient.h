@@ -40,6 +40,10 @@ public:
     Q_INVOKABLE void setMessageRead(qint64 accountId, const QString &folderPath, qint64 uid, bool read);
     Q_INVOKABLE void setMessageStarred(qint64 accountId, const QString &folderPath, qint64 uid, bool starred);
     Q_INVOKABLE void moveMessage(qint64 accountId, const QString &folderPath, qint64 uid, const QString &destFolder);
+    Q_INVOKABLE void deleteMessage(qint64 accountId, const QString &folderPath, qint64 uid);
+    Q_INVOKABLE void createFolder(qint64 accountId, const QString &name);
+    Q_INVOKABLE void renameFolder(qint64 accountId, const QString &oldName, const QString &newName);
+    Q_INVOKABLE void deleteFolder(qint64 accountId, const QString &name);
     Q_INVOKABLE void loadBody(qint64 accountId, const QString &folderPath, qint64 uid);
     Q_INVOKABLE void listAttachments(qint64 accountId, const QString &folderPath, qint64 uid);
     Q_INVOKABLE bool copyFile(const QString &srcPath, const QString &destPath);

@@ -213,6 +213,50 @@ void DaemonClient::moveMessage(qint64 accountId, const QString &folderPath, qint
     QDBusConnection::sessionBus().asyncCall(msg);
 }
 
+void DaemonClient::deleteMessage(qint64 accountId, const QString &folderPath, qint64 uid)
+{
+    if (!m_available) return;
+
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        SERVICE, PATH, INTERFACE, QStringLiteral("DeleteMessage"));
+    msg.setArguments({QVariant::fromValue(accountId), folderPath, QVariant::fromValue(uid)});
+
+    QDBusConnection::sessionBus().asyncCall(msg);
+}
+
+void DaemonClient::createFolder(qint64 accountId, const QString &name)
+{
+    if (!m_available) return;
+
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        SERVICE, PATH, INTERFACE, QStringLiteral("CreateFolder"));
+    msg.setArguments({QVariant::fromValue(accountId), name});
+
+    QDBusConnection::sessionBus().asyncCall(msg);
+}
+
+void DaemonClient::renameFolder(qint64 accountId, const QString &oldName, const QString &newName)
+{
+    if (!m_available) return;
+
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        SERVICE, PATH, INTERFACE, QStringLiteral("RenameFolder"));
+    msg.setArguments({QVariant::fromValue(accountId), oldName, newName});
+
+    QDBusConnection::sessionBus().asyncCall(msg);
+}
+
+void DaemonClient::deleteFolder(qint64 accountId, const QString &name)
+{
+    if (!m_available) return;
+
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        SERVICE, PATH, INTERFACE, QStringLiteral("DeleteFolder"));
+    msg.setArguments({QVariant::fromValue(accountId), name});
+
+    QDBusConnection::sessionBus().asyncCall(msg);
+}
+
 void DaemonClient::loadBody(qint64 accountId, const QString &folderPath, qint64 uid)
 {
     if (!m_available) return;
