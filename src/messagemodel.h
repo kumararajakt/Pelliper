@@ -32,6 +32,7 @@ class MessageModel : public QAbstractListModel
     Q_PROPERTY(int accountId READ accountId WRITE setAccountId NOTIFY accountIdChanged)
     Q_PROPERTY(QString sortRole READ sortRole NOTIFY sortRoleChanged)
     Q_PROPERTY(bool sortAscending READ sortAscending NOTIFY sortAscendingChanged)
+    Q_PROPERTY(bool hasMore READ hasMore NOTIFY hasMoreChanged)
 
 public:
     enum Roles {
@@ -62,8 +63,10 @@ public:
     void setAccountId(int id);
     QString sortRole() const { return m_sortRole; }
     bool sortAscending() const { return m_sortAscending; }
+    bool hasMore() const { return m_hasMore; }
 
     Q_INVOKABLE void setSort(const QString &role, bool ascending);
+    Q_INVOKABLE void loadMore();
     Q_INVOKABLE void refresh();
 
 Q_SIGNALS:
@@ -72,19 +75,23 @@ Q_SIGNALS:
     void accountIdChanged();
     void sortRoleChanged();
     void sortAscendingChanged();
+    void hasMoreChanged();
 
 private:
     Q_SLOT void onFileChanged(const QString &path);
 
 private:
     void startWatching();
-    void loadMessages();
+    void loadMessages(bool append = false);
     static QString cacheDbPath();
 
     int m_accountId = -1;
     QString m_folderPath;
     QString m_sortRole = QStringLiteral("date");
     bool m_sortAscending = false;
+    bool m_hasMore = false;
+    int m_offset = 0;
+    static constexpr int PAGE_SIZE = 50;
     QList<MessageEntry> m_messages;
 
     QFileSystemWatcher m_watcher;

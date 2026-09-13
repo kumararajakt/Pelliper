@@ -117,8 +117,15 @@ ColumnLayout {
         Layout.fillHeight: true
         Layout.fillWidth: true
         visible: threaded
+        clip: true
 
         model: Pelliper.ThreadModel
+
+        onAtYEndChanged: {
+            if (atYEnd && Pelliper.MessageModel.hasMore) {
+                Pelliper.MessageModel.loadMore()
+            }
+        }
 
         Kirigami.PlaceholderMessage {
             anchors.centerIn: parent
@@ -314,8 +321,15 @@ ColumnLayout {
         Layout.fillHeight: true
         Layout.fillWidth: true
         visible: !threaded
+        clip: true
 
         model: Pelliper.MessageModel
+
+        onAtYEndChanged: {
+            if (atYEnd && Pelliper.MessageModel.hasMore) {
+                Pelliper.MessageModel.loadMore()
+            }
+        }
 
         Kirigami.PlaceholderMessage {
             anchors.centerIn: parent

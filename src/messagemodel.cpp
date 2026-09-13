@@ -131,28 +131,41 @@ void MessageModel::setSort(const QString &role, bool ascending)
     m_sortAscending = ascending;
     Q_EMIT sortRoleChanged();
     Q_EMIT sortAscendingChanged();
+    m_offset = 0;
+    m_hasMore = false;
     loadMessages();
+}
+
+void MessageModel::loadMore()
+{
+    if (!m_hasMore) return;
+    loadMessages(/*append=*/true);
 }
 
 void MessageModel::refresh()
 {
+    m_offset = 0;
+    m_hasMore = false;
     loadMessages();
 }
 
-void MessageModel::loadMessages()
+void MessageModel::loadMessages(bool append)
 {
-    beginResetModel();
-    m_messages.clear();
+    if (!append) {
+        beginResetModel();
+        m_messages.clear();
+        m_offset = 0;
+    }
 
     if (m_accountId < 0 || m_folderPath.isEmpty()) {
-        endResetModel();
+        if (!append) endResetModel();
         Q_EMIT countChanged();
         return;
     }
 
     QString dbPath = cacheDbPath();
     if (!QFile::exists(dbPath)) {
-        endResetModel();
+        if (!append) endResetModel();
         Q_EMIT countChanged();
         return;
     }
@@ -166,7 +179,7 @@ void MessageModel::loadMessages()
 
         if (!db.open()) {
             qWarning() << "MessageModel: failed to open cache.db:" << db.lastError().text();
-            endResetModel();
+            if (!append) endResetModel();
             Q_EMIT countChanged();
             return;
         }
@@ -186,9 +199,11 @@ void MessageModel::loadMessages()
             "SELECT account_id, folder_path, uid, subject, sender, date, "
             "is_read, is_starred, has_attachments, preview, message_id, references_ "
             "FROM messages WHERE account_id = ? AND folder_path = ? "
-            "ORDER BY %1").arg(orderBy));
+            "ORDER BY %1 LIMIT ? OFFSET ?").arg(orderBy));
         query.addBindValue(m_accountId);
         query.addBindValue(m_folderPath);
+        query.addBindValue(PAGE_SIZE + 1);
+        query.addBindValue(m_offset);
 
         if (query.exec()) {
             while (query.next()) {
@@ -213,6 +228,22 @@ void MessageModel::loadMessages()
     }
     QSqlDatabase::removeDatabase(DB_CONN);
 
-    endResetModel();
+    bool hadMore = m_hasMore;
+    if (m_messages.size() > m_offset + PAGE_SIZE) {
+        // We got PAGE_SIZE + 1 rows, so there are more
+        m_messages.removeLast(); // drop the extra row
+        m_hasMore = true;
+        m_offset += PAGE_SIZE;
+    } else {
+        m_hasMore = false;
+        if (append) {
+            // No more rows appended, offset stays
+        } else {
+            m_offset = m_messages.size();
+        }
+    }
+
+    if (!append) endResetModel();
     Q_EMIT countChanged();
+    if (hadMore != m_hasMore) Q_EMIT hasMoreChanged();
 }
