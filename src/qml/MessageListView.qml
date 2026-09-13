@@ -57,6 +57,45 @@ ColumnLayout {
                     checked: !threaded
                     onToggled: threaded = !checked
                 }
+
+                Controls.MenuSeparator {}
+
+                Controls.MenuItem {
+                    text: qsTr("Date (newest first)")
+                    checkable: true
+                    checked: Pelliper.MessageModel.sortRole === "date" && !Pelliper.MessageModel.sortAscending
+                    onTriggered: Pelliper.MessageModel.setSort("date", false)
+                }
+                Controls.MenuItem {
+                    text: qsTr("Date (oldest first)")
+                    checkable: true
+                    checked: Pelliper.MessageModel.sortRole === "date" && Pelliper.MessageModel.sortAscending
+                    onTriggered: Pelliper.MessageModel.setSort("date", true)
+                }
+                Controls.MenuItem {
+                    text: qsTr("Sender (A–Z)")
+                    checkable: true
+                    checked: Pelliper.MessageModel.sortRole === "sender" && Pelliper.MessageModel.sortAscending
+                    onTriggered: Pelliper.MessageModel.setSort("sender", true)
+                }
+                Controls.MenuItem {
+                    text: qsTr("Sender (Z–A)")
+                    checkable: true
+                    checked: Pelliper.MessageModel.sortRole === "sender" && !Pelliper.MessageModel.sortAscending
+                    onTriggered: Pelliper.MessageModel.setSort("sender", false)
+                }
+                Controls.MenuItem {
+                    text: qsTr("Subject (A–Z)")
+                    checkable: true
+                    checked: Pelliper.MessageModel.sortRole === "subject" && Pelliper.MessageModel.sortAscending
+                    onTriggered: Pelliper.MessageModel.setSort("subject", true)
+                }
+                Controls.MenuItem {
+                    text: qsTr("Unread first")
+                    checkable: true
+                    checked: Pelliper.MessageModel.sortRole === "read" && !Pelliper.MessageModel.sortAscending
+                    onTriggered: Pelliper.MessageModel.setSort("read", false)
+                }
             }
 
             MouseArea {

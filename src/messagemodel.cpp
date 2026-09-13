@@ -124,6 +124,16 @@ void MessageModel::setAccountId(int id)
     loadMessages();
 }
 
+void MessageModel::setSort(const QString &role, bool ascending)
+{
+    if (m_sortRole == role && m_sortAscending == ascending) return;
+    m_sortRole = role;
+    m_sortAscending = ascending;
+    Q_EMIT sortRoleChanged();
+    Q_EMIT sortAscendingChanged();
+    loadMessages();
+}
+
 void MessageModel::refresh()
 {
     loadMessages();
@@ -162,11 +172,21 @@ void MessageModel::loadMessages()
         }
 
         QSqlQuery query(db);
+        QString orderBy;
+        if (m_sortRole == QStringLiteral("sender")) {
+            orderBy = m_sortAscending ? QStringLiteral("sender ASC, date DESC") : QStringLiteral("sender DESC, date DESC");
+        } else if (m_sortRole == QStringLiteral("subject")) {
+            orderBy = m_sortAscending ? QStringLiteral("subject ASC, date DESC") : QStringLiteral("subject DESC, date DESC");
+        } else if (m_sortRole == QStringLiteral("read")) {
+            orderBy = m_sortAscending ? QStringLiteral("is_read ASC, date DESC") : QStringLiteral("is_read DESC, date DESC");
+        } else {
+            orderBy = m_sortAscending ? QStringLiteral("date ASC") : QStringLiteral("date DESC");
+        }
         query.prepare(QStringLiteral(
             "SELECT account_id, folder_path, uid, subject, sender, date, "
             "is_read, is_starred, has_attachments, preview, message_id, references_ "
             "FROM messages WHERE account_id = ? AND folder_path = ? "
-            "ORDER BY date DESC"));
+            "ORDER BY %1").arg(orderBy));
         query.addBindValue(m_accountId);
         query.addBindValue(m_folderPath);
 
