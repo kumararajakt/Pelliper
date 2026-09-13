@@ -26,6 +26,7 @@ Kirigami.Page {
     property var attachments: []
     property string saveFileSrc: ""
     property bool hasRemoteContent: false
+    property bool senderIsKnown: false
 
     Kirigami.PlaceholderMessage {
         anchors.centerIn: parent
@@ -148,6 +149,17 @@ Kirigami.Page {
                     font.weight: Font.Medium
                     Layout.fillWidth: true
                     elide: Text.ElideRight
+                }
+
+                // Sender trust lightbulb: green for known contacts, amber for unknown.
+                Kirigami.Icon {
+                    source: "dialog-information"
+                    Layout.preferredWidth: 14
+                    Layout.preferredHeight: 14
+                    color: messageView.senderIsKnown ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.warningTextColor
+                    Controls.ToolTip.text: messageView.senderIsKnown ? qsTr("Known sender") : qsTr("Unknown sender")
+                    Controls.ToolTip.visible: hovered
+                    HoverHandler { id: bulbHover }
                 }
 
                 Controls.Label {
@@ -350,6 +362,7 @@ Kirigami.Separator {
         isRead = false
         isStarred = false
         attachments = []
+        senderIsKnown = false
     }
 
     function requestAttachments() {
@@ -405,6 +418,7 @@ Kirigami.Separator {
             if (uid === messageView.currentUid) {
                 messageView.bodyHtml = html
                 messageView.requestAttachments()
+                messageView.senderIsKnown = Pelliper.DaemonClient.isKnownAddress(messageView.sender)
             }
         }
         function onAttachmentsLoaded(uid, json) {

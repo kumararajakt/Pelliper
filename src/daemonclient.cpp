@@ -397,3 +397,18 @@ void DaemonClient::searchAddresses(const QString &query)
         Q_EMIT addressResults(reply.isError() ? QStringLiteral("[]") : reply.value());
     });
 }
+
+bool DaemonClient::isKnownAddress(const QString &email)
+{
+    if (!m_available) return false;
+
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        SERVICE, PATH, INTERFACE, QStringLiteral("IsKnownAddress"));
+    msg.setArguments({email});
+
+    QDBusMessage reply = QDBusConnection::sessionBus().call(msg, QDBus::Block, 3000);
+    if (reply.type() == QDBusMessage::ReplyMessage && !reply.arguments().isEmpty()) {
+        return reply.arguments().at(0).toBool();
+    }
+    return false;
+}
