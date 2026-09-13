@@ -221,8 +221,37 @@ Kirigami.Page {
                         messageView.clearMessage()
                     }
                 }
+                Controls.ToolButton {
+                    icon.name: "folder-download"
+                    Controls.ToolTip.text: qsTr("Archive")
+                    Controls.ToolTip.visible: hovered
+                    onClicked: {
+                        Pelliper.DaemonClient.moveMessage(
+                            messageView.accountId, messageView.folderPath,
+                            messageView.currentUid, "Archive")
+                        messageView.clearMessage()
+                    }
+                }
+                Controls.ToolButton {
+                    icon.name: "mail-flag"
+                    Controls.ToolTip.text: qsTr("Mark as Spam")
+                    Controls.ToolTip.visible: hovered
+                    onClicked: {
+                        Pelliper.DaemonClient.moveMessage(
+                            messageView.accountId, messageView.folderPath,
+                            messageView.currentUid, "Junk")
+                        messageView.clearMessage()
+                    }
+                }
 
                 Item { Layout.fillWidth: true }
+
+                Controls.ToolButton {
+                    icon.name: "document-print"
+                    Controls.ToolTip.text: qsTr("Print")
+                    Controls.ToolTip.visible: hovered
+                    onClicked: printDialog.open()
+                }
             }
 
             Kirigami.Separator {
@@ -263,6 +292,20 @@ Kirigami.Page {
                 Pelliper.DaemonClient.copyFile(messageView.saveFileSrc, dest)
             }
         }
+    }
+
+    Controls.Dialog {
+        id: printDialog
+        title: qsTr("Print Message")
+        parent: ApplicationWindow.overlay
+        modal: true
+        standardButtons: Controls.Dialog.Ok | Controls.Dialog.Cancel
+
+        Controls.Label {
+            text: qsTr("Print this message?")
+        }
+
+        onAccepted: webView.print()
     }
 
     function clearMessage() {
