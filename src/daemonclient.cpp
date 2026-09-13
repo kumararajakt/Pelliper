@@ -380,3 +380,20 @@ void DaemonClient::onGenericReply(QDBusPendingCallWatcher *watcher, const QStrin
         Q_EMIT messagesLoaded(reply.value());
     }
 }
+
+void DaemonClient::searchAddresses(const QString &query)
+{
+    if (!m_available) return;
+
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        SERVICE, PATH, INTERFACE, QStringLiteral("SearchAddresses"));
+    msg.setArguments({query});
+
+    QDBusPendingCall call = QDBusConnection::sessionBus().asyncCall(msg);
+    auto *watcher = new QDBusPendingCallWatcher(call, this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher]() {
+        QDBusPendingReply<QString> reply = *watcher;
+        watcher->deleteLater();
+        Q_EMIT addressResults(reply.isError() ? QStringLiteral("[]") : reply.value());
+    });
+}

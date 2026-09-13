@@ -104,6 +104,62 @@ Kirigami.Page {
             placeholderText: qsTr("To (comma separated)")
             text: root.to
             Layout.fillWidth: true
+            onTextChanged: {
+                var parts = text.split(",")
+                var last = parts[parts.length - 1].trim()
+                if (last.length >= 2) {
+                    Pelliper.DaemonClient.searchAddresses(last)
+                } else {
+                    addrPopup.close()
+                }
+            }
+        }
+
+        Controls.Popup {
+            id: addrPopup
+            y: toField.y + toField.height
+            width: toField.width
+            visible: addrModel.count > 0
+
+            ListView {
+                anchors.fill: parent
+                model: ListModel { id: addrModel }
+                delegate: Controls.ItemDelegate {
+                    width: addrPopup.width
+                    contentItem: RowLayout {
+                        Controls.Label {
+                            text: model.display
+                            font.weight: Font.Bold
+                        }
+                        Controls.Label {
+                            text: model.email
+                            color: Kirigami.Theme.disabledTextColor
+                        }
+                    }
+                    onClicked: {
+                        var parts = toField.text.split(",")
+                        parts[parts.length - 1] = " " + model.email
+                        toField.text = parts.join(",") + ", "
+                        addrPopup.close()
+                    }
+                }
+            }
+        }
+
+        Connections {
+            target: Pelliper.DaemonClient
+            function onAddressResults(json) {
+                addrModel.clear()
+                try {
+                    var arr = JSON.parse(json)
+                    for (var i = 0; i < arr.length; i++) {
+                        addrModel.append({
+                            email: arr[i].email,
+                            display: arr[i].name.length > 0 ? arr[i].name : arr[i].email
+                        })
+                    }
+                } catch (e) {}
+            }
         }
 
         Controls.TextField {

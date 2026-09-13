@@ -44,6 +44,7 @@ public:
     Q_INVOKABLE void createFolder(qint64 accountId, const QString &name);
     Q_INVOKABLE void renameFolder(qint64 accountId, const QString &oldName, const QString &newName);
     Q_INVOKABLE void deleteFolder(qint64 accountId, const QString &name);
+    Q_INVOKABLE void searchAddresses(const QString &query);
     Q_INVOKABLE void loadBody(qint64 accountId, const QString &folderPath, qint64 uid);
     Q_INVOKABLE void listAttachments(qint64 accountId, const QString &folderPath, qint64 uid);
     Q_INVOKABLE bool copyFile(const QString &srcPath, const QString &destPath);
@@ -72,6 +73,7 @@ Q_SIGNALS:
     void attachmentsLoaded(qint64 uid, const QString &json);
     void accountRemoved(qint64 accountId);
     void emailSent(const QString &error);
+    void addressResults(const QString &json);
 
 private Q_SLOTS:
     void onAddAccountReply(QDBusPendingCallWatcher *watcher);
