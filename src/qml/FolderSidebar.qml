@@ -14,6 +14,14 @@ ListView {
     property string savedFolderPath: settings.value("lastFolderPath", "")
 
     signal folderSelected(int accountId, string folderPath)
+    signal composeRequested()
+
+    header: Controls.Button {
+        width: folderList.width
+        text: qsTr("Compose")
+        icon.name: "mail-message-new"
+        onClicked: folderList.composeRequested()
+    }
 
     Settings {
         id: settings
