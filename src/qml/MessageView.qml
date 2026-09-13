@@ -25,6 +25,7 @@ Kirigami.Page {
     property bool isStarred: false
     property var attachments: []
     property string saveFileSrc: ""
+    property bool hasRemoteContent: false
 
     Kirigami.PlaceholderMessage {
         anchors.centerIn: parent
@@ -254,13 +255,38 @@ Kirigami.Page {
                 }
             }
 
-            Kirigami.Separator {
+Kirigami.Separator {
                 Layout.fillWidth: true
                 Layout.topMargin: Kirigami.Units.smallSpacing
             }
         }
 
-WebEngineView {
+        // Blocked-content banner
+        Rectangle {
+            Layout.fillWidth: true
+            visible: messageView.hasRemoteContent
+            height: visible ? 32 : 0
+            color: Kirigami.Theme.alternateBackgroundColor
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: Kirigami.Units.smallSpacing
+                anchors.rightMargin: Kirigami.Units.smallSpacing
+
+                Kirigami.Icon {
+                    source: "dialog-information"
+                    Layout.preferredWidth: 16
+                    Layout.preferredHeight: 16
+                }
+                Controls.Label {
+                    text: qsTr("Remote images are blocked for privacy.")
+                    font.pointSize: 10
+                    color: Kirigami.Theme.disabledTextColor
+                }
+            }
+        }
+
+        WebEngineView {
             id: webView
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -354,6 +380,10 @@ WebEngineView {
 
     function loadBodyToView() {
         if (currentUid < 0 || bodyHtml === "") return
+
+        // Detect remote images (http/https src) for the blocked-content banner.
+        messageView.hasRemoteContent = /<img[^>]+src\s*=\s*["']https?:\/\//i.test(bodyHtml)
+
         var fullHtml = "<!DOCTYPE html>"
             + "<html><head><meta charset=\"utf-8\">"
             + "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">"
