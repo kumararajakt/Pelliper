@@ -30,6 +30,49 @@ Kirigami.Page {
         category: "compose"
     }
 
+    // Auto-save timer: persists draft every 30 seconds while composing.
+    Timer {
+        id: autoSaveTimer
+        interval: 30000
+        repeat: true
+        running: root.visible && !root.sending
+        onTriggered: root.saveDraft()
+    }
+
+    function saveDraft() {
+        if (toField.text.trim().length === 0 && subjectField.text.trim().length === 0 && bodyField.text.trim().length === 0) {
+            return
+        }
+        settings.setValue("draft/accountId", root.accountId)
+        settings.setValue("draft/to", toField.text)
+        settings.setValue("draft/cc", ccField.text)
+        settings.setValue("draft/subject", subjectField.text)
+        settings.setValue("draft/body", bodyField.text)
+        settings.setValue("draft/hasDraft", true)
+    }
+
+    function loadDraft() {
+        if (!settings.value("draft/hasDraft", false)) return false
+        root.accountId = settings.value("draft/accountId", -1)
+        root.to = settings.value("draft/to", "")
+        root.cc = settings.value("draft/cc", "")
+        root.subject = settings.value("draft/subject", "")
+        root.body = settings.value("draft/body", "")
+        root.replyFolderPath = ""
+        root.replyUid = 0
+        root.attachments = []
+        return true
+    }
+
+    function clearDraft() {
+        settings.remove("draft/hasDraft")
+        settings.remove("draft/accountId")
+        settings.remove("draft/to")
+        settings.remove("draft/cc")
+        settings.remove("draft/subject")
+        settings.remove("draft/body")
+    }
+
     function openTo(accountId, to, subject, body) {
         root.accountId = accountId
         root.to = to || ""
@@ -357,7 +400,10 @@ Kirigami.Page {
 
             Controls.Button {
                 text: "Discard"
-                onClicked: applicationWindow().pageStack.layers.pop()
+                onClicked: {
+                    root.clearDraft()
+                    applicationWindow().pageStack.layers.pop()
+                }
             }
 
             Controls.Button {
@@ -391,6 +437,7 @@ Kirigami.Page {
         function onEmailSent(error) {
             root.sending = false
             if (error.length === 0) {
+                root.clearDraft()
                 applicationWindow().pageStack.layers.pop()
                 applicationWindow().showPassiveNotification(qsTr("Email sent"))
             } else {

@@ -54,7 +54,12 @@ Kirigami.Page {
 
     function openCompose(accountId, to, subject, body) {
         var page = composePageComponent.createObject(applicationWindow())
-        page.openTo(accountId, to, subject, body)
+        // If no explicit content provided, try restoring a saved draft.
+        if (!to && !subject && !body && page.loadDraft()) {
+            applicationWindow().showPassiveNotification(qsTr("Draft restored"))
+        } else {
+            page.openTo(accountId, to, subject, body)
+        }
         applicationWindow().pageStack.layers.push(page)
     }
 
