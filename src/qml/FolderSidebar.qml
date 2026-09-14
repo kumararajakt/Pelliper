@@ -12,15 +12,65 @@ ListView {
 
     property int savedAccountId: Number(settings.value("lastAccountId", -1))
     property string savedFolderPath: settings.value("lastFolderPath", "")
+    property bool unifiedMode: false
 
     signal folderSelected(int accountId, string folderPath)
     signal composeRequested()
 
-    header: Controls.Button {
+    header: ColumnLayout {
         width: folderList.width
-        text: qsTr("Compose")
-        icon.name: "mail-message-new"
-        onClicked: folderList.composeRequested()
+        spacing: 0
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 0
+
+            Controls.ToolButton {
+                Layout.fillWidth: true
+                text: qsTr("Compose")
+                icon.name: "mail-message-new"
+                onClicked: folderList.composeRequested()
+            }
+
+            Controls.ToolButton {
+                icon.name: folderList.unifiedMode ? "view-refresh" : "view-list-icons"
+                Controls.ToolTip.text: folderList.unifiedMode ? qsTr("Normal view") : qsTr("Unified inbox")
+                Controls.ToolTip.visible: hovered
+                onClicked: {
+                    folderList.unifiedMode = !folderList.unifiedMode
+                    if (folderList.unifiedMode) {
+                        folderList.folderSelected(-1, "INBOX")
+                    } else {
+                        folderList.restoreSelection()
+                    }
+                }
+            }
+        }
+
+        // Unified inbox pseudo-entry (only visible in unified mode)
+        Controls.ItemDelegate {
+            width: folderList.width
+            visible: folderList.unifiedMode
+            contentItem: RowLayout {
+                spacing: Kirigami.Units.smallSpacing
+                Kirigami.Icon {
+                    source: "inbox"
+                    Layout.preferredWidth: 16
+                    Layout.preferredHeight: 16
+                }
+                Controls.Label {
+                    text: qsTr("All Inboxes")
+                    font.weight: Font.Bold
+                    Layout.fillWidth: true
+                }
+            }
+            onClicked: folderList.folderSelected(-1, "INBOX")
+        }
+
+        Kirigami.Separator {
+            Layout.fillWidth: true
+            visible: folderList.unifiedMode
+        }
     }
 
     Settings {
@@ -63,6 +113,7 @@ ListView {
         required property int index
 
         width: folderList.width
+        visible: !folderList.unifiedMode || item.path === "INBOX"
 
         contentItem: RowLayout {
             spacing: Kirigami.Units.smallSpacing

@@ -141,11 +141,21 @@ Kirigami.Page {
                 Layout.fillHeight: true
 
                 onFolderSelected: function (accountId, folderPath) {
-                    Pelliper.MessageModel.accountId = accountId;
-                    Pelliper.MessageModel.folderPath = folderPath;
-                    Pelliper.ThreadModel.accountId = accountId;
-                    Pelliper.ThreadModel.folderPath = folderPath;
-                    Pelliper.DaemonClient.setIdleFolder(accountId, folderPath);
+                    var unified = (accountId === -1 && folderPath === "INBOX")
+                    Pelliper.MessageModel.unifiedInbox = unified;
+                    Pelliper.ThreadModel.unifiedInbox = unified;
+                    if (!unified) {
+                        Pelliper.MessageModel.accountId = accountId;
+                        Pelliper.MessageModel.folderPath = folderPath;
+                        Pelliper.ThreadModel.accountId = accountId;
+                        Pelliper.ThreadModel.folderPath = folderPath;
+                        Pelliper.DaemonClient.setIdleFolder(accountId, folderPath);
+                    } else {
+                        Pelliper.MessageModel.accountId = -1;
+                        Pelliper.MessageModel.folderPath = "INBOX";
+                        Pelliper.ThreadModel.accountId = -1;
+                        Pelliper.ThreadModel.folderPath = "INBOX";
+                    }
                 }
 
                 onComposeRequested: {
