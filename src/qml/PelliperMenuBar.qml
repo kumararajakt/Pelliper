@@ -12,6 +12,16 @@ Platform.MenuBar {
     property int folderMode: 0
 
     Platform.Menu {
+        title: qsTr("&File")
+
+        Platform.MenuItem {
+            text: qsTr("Quit")
+            shortcut: "Ctrl+Q"
+            onTriggered: Qt.quit()
+        }
+    }
+
+    Platform.Menu {
         title: qsTr("&View")
 
         Platform.Menu {
