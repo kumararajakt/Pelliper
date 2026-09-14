@@ -14,6 +14,14 @@ ColumnLayout {
     property bool selectionMode: false
     property var selectedItems: ({})
 
+    Shortcut { sequence: "Escape"; onActivated: {
+        if (selectionMode) deselectAll()
+    }}
+    Shortcut { sequence: "Ctrl+A"; onActivated: {
+        selectionMode = true
+        selectAll()
+    }}
+
     function extractEmail(sender) {
         var match = sender.match(/<([^>]+)>/)
         if (match) return match[1]

@@ -35,6 +35,28 @@ Kirigami.Page {
         return ""
     }
 
+    Shortcut { sequence: "R"; onActivated: {
+        if (currentUid >= 0) replyRequested(accountId, folderPath, currentUid, subject, sender, messageDate, bodyHtml)
+    }}
+    Shortcut { sequence: "F"; onActivated: {
+        if (currentUid >= 0) forwardRequested(accountId, folderPath, currentUid, subject, sender, messageDate, bodyHtml)
+    }}
+    Shortcut { sequence: "Delete"; onActivated: {
+        if (currentUid >= 0) { Pelliper.DaemonClient.deleteMessage(accountId, folderPath, currentUid); clearMessage() }
+    }}
+    Shortcut { sequence: "S"; onActivated: {
+        if (currentUid >= 0) {
+            isStarred = !isStarred
+            Pelliper.DaemonClient.setMessageStarred(accountId, folderPath, currentUid, isStarred)
+        }
+    }}
+    Shortcut { sequence: "M"; onActivated: {
+        if (currentUid >= 0) {
+            isRead = !isRead
+            Pelliper.DaemonClient.setMessageRead(accountId, folderPath, currentUid, isRead)
+        }
+    }}
+
     Kirigami.PlaceholderMessage {
         anchors.centerIn: parent
         width: parent.width - (Kirigami.Units.largeSpacing * 4)

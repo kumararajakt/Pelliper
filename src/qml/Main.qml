@@ -23,6 +23,18 @@ Kirigami.ApplicationWindow {
         }
     }
 
+    Shortcut { sequence: "Ctrl+N"; onActivated: {
+        var page = root.pageStack.currentItem
+        if (page && page.openCompose) page.openCompose()
+    }}
+    Shortcut { sequence: "Ctrl+R"; onActivated: {
+        var page = root.pageStack.currentItem
+        if (page && page.refreshMessages) page.refreshMessages()
+    }}
+    Shortcut { sequence: "Ctrl+S"; onActivated: {
+        root.pageStack.layers.push(searchPageComponent)
+    }}
+
 
     Component {
         id: settingsPageComponent

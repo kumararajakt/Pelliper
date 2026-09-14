@@ -20,6 +20,10 @@ Kirigami.Page {
         }
     }
 
+    function refreshMessages() {
+        Pelliper.DaemonClient.syncAll()
+    }
+
     Component {
         id: settingsPageComponent
         SettingsPage {
