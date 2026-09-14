@@ -11,6 +11,15 @@ Kirigami.Page {
     property string selectedFolderPath: ""
     property int selectedUid: -1
 
+    function setFolderMode(mode) {
+        sidebar.unifiedMode = (mode === 1)
+        if (sidebar.unifiedMode) {
+            sidebar.folderSelected(-1, "INBOX")
+        } else {
+            sidebar.restoreSelection()
+        }
+    }
+
     Component {
         id: settingsPageComponent
         SettingsPage {

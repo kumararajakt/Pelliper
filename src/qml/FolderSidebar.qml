@@ -21,30 +21,11 @@ ListView {
         width: folderList.width
         spacing: 0
 
-        RowLayout {
+        Controls.Button {
             Layout.fillWidth: true
-            spacing: 0
-
-            Controls.ToolButton {
-                Layout.fillWidth: true
-                text: qsTr("Compose")
-                icon.name: "mail-message-new"
-                onClicked: folderList.composeRequested()
-            }
-
-            Controls.ToolButton {
-                icon.name: folderList.unifiedMode ? "view-refresh" : "view-list-icons"
-                Controls.ToolTip.text: folderList.unifiedMode ? qsTr("Normal view") : qsTr("Unified inbox")
-                Controls.ToolTip.visible: hovered
-                onClicked: {
-                    folderList.unifiedMode = !folderList.unifiedMode
-                    if (folderList.unifiedMode) {
-                        folderList.folderSelected(-1, "INBOX")
-                    } else {
-                        folderList.restoreSelection()
-                    }
-                }
-            }
+            text: qsTr("Compose")
+            icon.name: "mail-message-new"
+            onClicked: folderList.composeRequested()
         }
 
         // Unified inbox pseudo-entry (only visible in unified mode)
