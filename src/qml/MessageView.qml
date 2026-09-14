@@ -27,6 +27,7 @@ Kirigami.Page {
     property string saveFileSrc: ""
     property bool hasRemoteContent: false
     property bool senderIsKnown: false
+    property string hoveredLink: ""
 
     Kirigami.PlaceholderMessage {
         anchors.centerIn: parent
@@ -307,10 +308,45 @@ Kirigami.Separator {
             settings.localContentCanAccessRemoteUrls: false
             settings.localContentCanAccessFileUrls: false
 
+            onLinkHovered: function(url) {
+                messageView.hoveredLink = url ? url.toString() : ""
+            }
+
             onNavigationRequested: function(request) {
                 if (request.requestedUrl.toString().length > 0) {
                     Qt.openUrlExternally(request.requestedUrl)
                     request.action = WebEngineNavigationRequest.IgnoreRequest
+                }
+            }
+        }
+
+        // Link hover bar — shows actual URL on hover for phishing detection
+        Rectangle {
+            Layout.fillWidth: true
+            visible: messageView.hoveredLink.length > 0
+            height: visible ? 24 : 0
+            color: Kirigami.Theme.alternateBackgroundColor
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: Kirigami.Units.smallSpacing
+                anchors.rightMargin: Kirigami.Units.smallSpacing
+
+                Kirigami.Icon {
+                    source: messageView.hoveredLink.startsWith("https://") ? "dialog-ok" : "dialog-warning"
+                    Layout.preferredWidth: 14
+                    Layout.preferredHeight: 14
+                    color: messageView.hoveredLink.startsWith("https://")
+                        ? Kirigami.Theme.positiveTextColor
+                        : Kirigami.Theme.warningTextColor
+                }
+
+                Controls.Label {
+                    text: messageView.hoveredLink
+                    font.pointSize: 9
+                    color: Kirigami.Theme.disabledTextColor
+                    elide: Text.ElideMiddle
+                    Layout.fillWidth: true
                 }
             }
         }
@@ -363,6 +399,7 @@ Kirigami.Separator {
         isStarred = false
         attachments = []
         senderIsKnown = false
+        hoveredLink = ""
     }
 
     function requestAttachments() {
