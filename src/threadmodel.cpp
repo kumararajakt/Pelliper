@@ -127,6 +127,14 @@ void ThreadModel::setAccountId(int id)
     loadMessages();
 }
 
+void ThreadModel::setUnifiedInbox(bool enabled)
+{
+    if (m_unifiedInbox == enabled) return;
+    m_unifiedInbox = enabled;
+    Q_EMIT unifiedInboxChanged();
+    loadMessages();
+}
+
 void ThreadModel::refresh()
 {
     loadMessages();
@@ -134,7 +142,7 @@ void ThreadModel::refresh()
 
 void ThreadModel::loadMessages()
 {
-    if (m_accountId < 0 || m_folderPath.isEmpty()) {
+    if (!m_unifiedInbox && (m_accountId < 0 || m_folderPath.isEmpty())) {
         beginResetModel();
         m_threads.clear();
         endResetModel();
@@ -168,27 +176,39 @@ void ThreadModel::loadMessages()
         }
 
         QSqlQuery query(db);
-        query.prepare(QStringLiteral(
-            "SELECT uid, subject, sender, date, is_read, is_starred, has_attachments, "
-            "preview, message_id, references_ "
-            "FROM messages WHERE account_id = ? AND folder_path = ? "
-            "ORDER BY date DESC"));
-        query.addBindValue(m_accountId);
-        query.addBindValue(m_folderPath);
+        if (m_unifiedInbox) {
+            query.prepare(QStringLiteral(
+                "SELECT account_id, uid, subject, sender, date, is_read, is_starred, has_attachments, "
+                "preview, message_id, references_ "
+                "FROM messages WHERE folder_path = 'INBOX' "
+                "ORDER BY date DESC"));
+        } else {
+            query.prepare(QStringLiteral(
+                "SELECT uid, subject, sender, date, is_read, is_starred, has_attachments, "
+                "preview, message_id, references_ "
+                "FROM messages WHERE account_id = ? AND folder_path = ? "
+                "ORDER BY date DESC"));
+            query.addBindValue(m_accountId);
+            query.addBindValue(m_folderPath);
+        }
 
         if (query.exec()) {
             while (query.next()) {
                 QMap<QString, QVariant> row;
-                row[QStringLiteral("uid")] = query.value(0);
-                row[QStringLiteral("subject")] = query.value(1);
-                row[QStringLiteral("sender")] = query.value(2);
-                row[QStringLiteral("date")] = query.value(3);
-                row[QStringLiteral("is_read")] = query.value(4);
-                row[QStringLiteral("is_starred")] = query.value(5);
-                row[QStringLiteral("has_attachments")] = query.value(6);
-                row[QStringLiteral("preview")] = query.value(7);
-                row[QStringLiteral("message_id")] = query.value(8);
-                row[QStringLiteral("references_")] = query.value(9);
+                int col = 0;
+                if (m_unifiedInbox) {
+                    row[QStringLiteral("account_id")] = query.value(col++);
+                }
+                row[QStringLiteral("uid")] = query.value(col++);
+                row[QStringLiteral("subject")] = query.value(col++);
+                row[QStringLiteral("sender")] = query.value(col++);
+                row[QStringLiteral("date")] = query.value(col++);
+                row[QStringLiteral("is_read")] = query.value(col++);
+                row[QStringLiteral("is_starred")] = query.value(col++);
+                row[QStringLiteral("has_attachments")] = query.value(col++);
+                row[QStringLiteral("preview")] = query.value(col++);
+                row[QStringLiteral("message_id")] = query.value(col++);
+                row[QStringLiteral("references_")] = query.value(col++);
                 rows.append(row);
             }
         }
@@ -257,8 +277,8 @@ void ThreadModel::loadMessages()
         const auto &rootMsg = rows[rootRow];
 
         ThreadGroup group;
-        group.accountId = m_accountId;
-        group.folderPath = m_folderPath;
+        group.accountId = m_unifiedInbox ? rootMsg[QStringLiteral("account_id")].toInt() : m_accountId;
+        group.folderPath = m_unifiedInbox ? QStringLiteral("INBOX") : m_folderPath;
         group.rootUid = rootMsg[QStringLiteral("uid")].toInt();
         group.subject = rootMsg[QStringLiteral("subject")].toString();
         group.sender = rootMsg[QStringLiteral("sender")].toString();

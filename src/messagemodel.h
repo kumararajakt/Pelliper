@@ -33,6 +33,7 @@ class MessageModel : public QAbstractListModel
     Q_PROPERTY(QString sortRole READ sortRole NOTIFY sortRoleChanged)
     Q_PROPERTY(bool sortAscending READ sortAscending NOTIFY sortAscendingChanged)
     Q_PROPERTY(bool hasMore READ hasMore NOTIFY hasMoreChanged)
+    Q_PROPERTY(bool unifiedInbox READ unifiedInbox WRITE setUnifiedInbox NOTIFY unifiedInboxChanged)
 
 public:
     enum Roles {
@@ -64,8 +65,10 @@ public:
     QString sortRole() const { return m_sortRole; }
     bool sortAscending() const { return m_sortAscending; }
     bool hasMore() const { return m_hasMore; }
+    bool unifiedInbox() const { return m_unifiedInbox; }
 
     Q_INVOKABLE void setSort(const QString &role, bool ascending);
+    Q_INVOKABLE void setUnifiedInbox(bool enabled);
     Q_INVOKABLE void loadMore();
     Q_INVOKABLE void refresh();
 
@@ -76,6 +79,7 @@ Q_SIGNALS:
     void sortRoleChanged();
     void sortAscendingChanged();
     void hasMoreChanged();
+    void unifiedInboxChanged();
 
 private:
     Q_SLOT void onFileChanged(const QString &path);
@@ -90,6 +94,7 @@ private:
     QString m_sortRole = QStringLiteral("date");
     bool m_sortAscending = false;
     bool m_hasMore = false;
+    bool m_unifiedInbox = false;
     int m_offset = 0;
     static constexpr int PAGE_SIZE = 50;
     QList<MessageEntry> m_messages;

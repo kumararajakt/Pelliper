@@ -136,6 +136,16 @@ void MessageModel::setSort(const QString &role, bool ascending)
     loadMessages();
 }
 
+void MessageModel::setUnifiedInbox(bool enabled)
+{
+    if (m_unifiedInbox == enabled) return;
+    m_unifiedInbox = enabled;
+    Q_EMIT unifiedInboxChanged();
+    m_offset = 0;
+    m_hasMore = false;
+    loadMessages();
+}
+
 void MessageModel::loadMore()
 {
     if (!m_hasMore) return;
@@ -157,7 +167,15 @@ void MessageModel::loadMessages(bool append)
         m_offset = 0;
     }
 
-    if (m_accountId < 0 || m_folderPath.isEmpty()) {
+    if (!m_unifiedInbox && (m_accountId < 0 || m_folderPath.isEmpty())) {
+        if (!append) endResetModel();
+        Q_EMIT countChanged();
+        return;
+    }
+
+    if (m_unifiedInbox && m_folderPath.isEmpty()) {
+        // Unified mode defaults to INBOX
+    } else if (m_unifiedInbox && m_folderPath != QStringLiteral("INBOX")) {
         if (!append) endResetModel();
         Q_EMIT countChanged();
         return;
@@ -198,10 +216,16 @@ void MessageModel::loadMessages(bool append)
         query.prepare(QStringLiteral(
             "SELECT account_id, folder_path, uid, subject, sender, date, "
             "is_read, is_starred, has_attachments, preview, message_id, references_ "
-            "FROM messages WHERE account_id = ? AND folder_path = ? "
-            "ORDER BY %1 LIMIT ? OFFSET ?").arg(orderBy));
-        query.addBindValue(m_accountId);
-        query.addBindValue(m_folderPath);
+            "FROM messages WHERE %1 "
+            "ORDER BY %2 LIMIT ? OFFSET ?")
+            .arg(m_unifiedInbox
+                ? QStringLiteral("folder_path = 'INBOX'")
+                : QStringLiteral("account_id = ? AND folder_path = ?"),
+            orderBy));
+        if (!m_unifiedInbox) {
+            query.addBindValue(m_accountId);
+            query.addBindValue(m_folderPath);
+        }
         query.addBindValue(PAGE_SIZE + 1);
         query.addBindValue(m_offset);
 
