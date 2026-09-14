@@ -180,8 +180,9 @@ void ThreadModel::loadMessages()
             query.prepare(QStringLiteral(
                 "SELECT account_id, uid, subject, sender, date, is_read, is_starred, has_attachments, "
                 "preview, message_id, references_ "
-                "FROM messages WHERE folder_path = 'INBOX' "
+                "FROM messages WHERE folder_path = ? "
                 "ORDER BY date DESC"));
+            query.addBindValue(m_folderPath);
         } else {
             query.prepare(QStringLiteral(
                 "SELECT uid, subject, sender, date, is_read, is_starred, has_attachments, "

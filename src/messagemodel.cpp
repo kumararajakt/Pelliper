@@ -219,10 +219,12 @@ void MessageModel::loadMessages(bool append)
             "FROM messages WHERE %1 "
             "ORDER BY %2 LIMIT ? OFFSET ?")
             .arg(m_unifiedInbox
-                ? QStringLiteral("folder_path = 'INBOX'")
+                ? QStringLiteral("folder_path = ?")
                 : QStringLiteral("account_id = ? AND folder_path = ?"),
             orderBy));
-        if (!m_unifiedInbox) {
+        if (m_unifiedInbox) {
+            query.addBindValue(m_folderPath);
+        } else {
             query.addBindValue(m_accountId);
             query.addBindValue(m_folderPath);
         }

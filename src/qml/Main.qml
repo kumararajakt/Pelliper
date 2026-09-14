@@ -3,7 +3,6 @@ import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
 import org.kde.pelliper as Pelliper
-import Qt.labs.platform as Platform
 
 Kirigami.ApplicationWindow {
     id: root
@@ -14,7 +13,7 @@ Kirigami.ApplicationWindow {
 
     title: "Pelliper"
 
-    menuBar: MenuBar {
+     PelliperMenuBar {
         id: appMenuBar
         onFolderViewModeChanged: function(mode) {
             var page = root.pageStack.currentItem
@@ -23,21 +22,6 @@ Kirigami.ApplicationWindow {
             }
         }
     }
-
-    Component {
-        id: aboutPageComponent
-        Kirigami.Page {
-            title: qsTr("About Pelliper")
-            Kirigami.PlaceholderMessage {
-                anchors.centerIn: parent
-                text: qsTr("Pelliper")
-                explanation: qsTr("A KDE email client")
-            }
-        }
-    }
-
-
-
 
 
     Component {

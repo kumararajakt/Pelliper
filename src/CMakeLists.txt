@@ -43,6 +43,7 @@ ecm_target_qml_sources(pelliper
     qml/MessageView.qml
     qml/SettingsPage.qml
     qml/SearchPage.qml
+    qml/PelliperMenuBar.qml
 )
 
 target_link_libraries(pelliper

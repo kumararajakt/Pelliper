@@ -13,6 +13,7 @@ ListView {
     property int savedAccountId: Number(settings.value("lastAccountId", -1))
     property string savedFolderPath: settings.value("lastFolderPath", "")
     property bool unifiedMode: false
+    property var unifiedFolderModel: unifiedMode ? buildUnifiedModel() : []
 
     signal folderSelected(int accountId, string folderPath)
     signal composeRequested()
@@ -28,29 +29,47 @@ ListView {
             onClicked: folderList.composeRequested()
         }
 
-        // Unified inbox pseudo-entry (only visible in unified mode)
-        Controls.ItemDelegate {
-            width: folderList.width
-            visible: folderList.unifiedMode
-            contentItem: RowLayout {
-                spacing: Kirigami.Units.smallSpacing
-                Kirigami.Icon {
-                    source: "inbox"
-                    Layout.preferredWidth: 16
-                    Layout.preferredHeight: 16
+        // Unified folder entries (only visible in unified mode)
+        Repeater {
+            model: folderList.unifiedMode ? unifiedFolderModel : []
+            delegate: Controls.ItemDelegate {
+                width: folderList.width
+                contentItem: RowLayout {
+                    spacing: Kirigami.Units.smallSpacing
+                    Kirigami.Icon {
+                        source: modelData.icon
+                        Layout.preferredWidth: 16
+                        Layout.preferredHeight: 16
+                    }
+                    Controls.Label {
+                        text: modelData.label
+                        font.weight: Font.Bold
+                        Layout.fillWidth: true
+                    }
+                    Controls.Label {
+                        text: modelData.unread > 0 ? modelData.unread.toString() : ""
+                        color: Kirigami.Theme.highlightColor
+                        font.pointSize: 10
+                    }
                 }
-                Controls.Label {
-                    text: qsTr("All Inboxes")
-                    font.weight: Font.Bold
-                    Layout.fillWidth: true
-                }
+                onClicked: folderList.folderSelected(-1, modelData.folder)
             }
-            onClicked: folderList.folderSelected(-1, "INBOX")
         }
 
         Kirigami.Separator {
             Layout.fillWidth: true
             visible: folderList.unifiedMode
+        }
+
+        // Account section header in unified mode
+        Controls.Label {
+            text: qsTr("Folders")
+            font.pointSize: 10
+            font.weight: Font.Bold
+            color: Kirigami.Theme.disabledTextColor
+            visible: folderList.unifiedMode
+            Layout.leftMargin: Kirigami.Units.smallSpacing
+            Layout.topMargin: Kirigami.Units.smallSpacing
         }
     }
 
@@ -68,6 +87,37 @@ ListView {
         if (savedAccountId >= 0 && savedFolderPath !== "") {
             folderSelected(savedAccountId, savedFolderPath)
         }
+    }
+
+    function buildUnifiedModel() {
+        var folders = [
+            { label: qsTr("Inboxes"), folder: "INBOX", icon: "inbox", unread: 0 },
+            { label: qsTr("Sent"), folder: "Sent", icon: "mail-sent", unread: 0 },
+            { label: qsTr("Drafts"), folder: "Drafts", icon: "document-properties", unread: 0 },
+            { label: qsTr("Trash"), folder: "Trash", icon: "user-trash", unread: 0 },
+            { label: qsTr("Archive"), folder: "Archive", icon: "archive-extract", unread: 0 },
+            { label: qsTr("Junk"), folder: "Junk", icon: "mail-flagged", unread: 0 }
+        ]
+        // Find role indices from roleNames
+        var roles = Pelliper.FolderModel.roleNames
+        var pathRole = 0, unreadRole = 0, headerRole = 0
+        for (var key in roles) {
+            if (roles[key] === "path") pathRole = Number(key)
+            if (roles[key] === "unreadCount") unreadRole = Number(key)
+            if (roles[key] === "isAccountHeader") headerRole = Number(key)
+        }
+        for (var i = 0; i < Pelliper.FolderModel.count; i++) {
+            var idx = Pelliper.FolderModel.index(i, 0)
+            if (Pelliper.FolderModel.data(idx, headerRole)) continue
+            var path = Pelliper.FolderModel.data(idx, pathRole)
+            var unread = Pelliper.FolderModel.data(idx, unreadRole)
+            for (var j = 0; j < folders.length; j++) {
+                if (path === folders[j].folder) {
+                    folders[j].unread += unread
+                }
+            }
+        }
+        return folders
     }
 
     Kirigami.PlaceholderMessage {
@@ -94,7 +144,7 @@ ListView {
         required property int index
 
         width: folderList.width
-        visible: !folderList.unifiedMode || item.path === "INBOX"
+        visible: !folderList.unifiedMode || (!item.isAccountHeader && !item.isEssential)
 
         contentItem: RowLayout {
             spacing: Kirigami.Units.smallSpacing
