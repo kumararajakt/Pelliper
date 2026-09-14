@@ -11,6 +11,76 @@ ColumnLayout {
     signal forwardRequested(int accountId, string folderPath, int uid, string subject, string sender, real date, bool isRead, bool isStarred)
 
     property bool threaded: true
+    property bool selectionMode: false
+    property var selectedItems: ({})
+
+    function toggleSelection(accountId, folderPath, uid) {
+        var key = accountId + ":" + folderPath + ":" + uid
+        var copy = JSON.parse(JSON.stringify(selectedItems))
+        if (copy[key]) {
+            delete copy[key]
+        } else {
+            copy[key] = {accountId: accountId, folderPath: folderPath, uid: uid}
+        }
+        selectedItems = copy
+        if (Object.keys(selectedItems).length === 0) {
+            selectionMode = false
+        }
+    }
+
+    function selectedCount() {
+        return Object.keys(selectedItems).length
+    }
+
+    function selectAll() {
+        var copy = {}
+        var model = threaded ? Pelliper.ThreadModel : Pelliper.MessageModel
+        for (var i = 0; i < model.count; i++) {
+            var idx = model.index(i, 0)
+            var roles = model.roleNames()
+            var acidRole = 0, pathRole = 0, uidRole = 0
+            for (var k in roles) {
+                if (roles[k] === "accountId") acidRole = Number(k)
+                if (roles[k] === "folderPath") pathRole = Number(k)
+                if (roles[k] === "uid") uidRole = Number(k)
+            }
+            var a = model.data(idx, acidRole)
+            var p = model.data(idx, pathRole)
+            var u = model.data(idx, uidRole)
+            var key = a + ":" + p + ":" + u
+            copy[key] = {accountId: a, folderPath: p, uid: u}
+        }
+        selectedItems = copy
+    }
+
+    function deselectAll() {
+        selectedItems = {}
+        selectionMode = false
+    }
+
+    function performBulkAction(action) {
+        for (var key in selectedItems) {
+            var item = selectedItems[key]
+            if (action === "delete") {
+                Pelliper.DaemonClient.deleteMessage(item.accountId, item.folderPath, item.uid)
+            } else if (action === "read") {
+                Pelliper.DaemonClient.setMessageRead(item.accountId, item.folderPath, item.uid, true)
+            } else if (action === "unread") {
+                Pelliper.DaemonClient.setMessageRead(item.accountId, item.folderPath, item.uid, false)
+            } else if (action === "star") {
+                Pelliper.DaemonClient.setMessageStarred(item.accountId, item.folderPath, item.uid, true)
+            } else if (action === "unstar") {
+                Pelliper.DaemonClient.setMessageStarred(item.accountId, item.folderPath, item.uid, false)
+            }
+        }
+        selectedItems = {}
+        selectionMode = false
+    }
+
+    function isSelected(accountId, folderPath, uid) {
+        var key = accountId + ":" + folderPath + ":" + uid
+        return !!selectedItems[key]
+    }
 
     RowLayout {
         Layout.fillWidth: true
@@ -19,7 +89,10 @@ ColumnLayout {
         Layout.rightMargin: Kirigami.Units.smallSpacing
 
         Controls.Label {
-            text: Pelliper.MessageModel.folderPath ? Pelliper.MessageModel.folderPath : qsTr("Select a folder")
+            text: {
+                if (selectionMode) return qsTr("%1 selected").arg(selectedCount())
+                return Pelliper.MessageModel.folderPath ? Pelliper.MessageModel.folderPath : qsTr("Select a folder")
+            }
             font.pointSize: 14
             font.weight: Font.Bold
             Layout.fillWidth: true
@@ -32,16 +105,27 @@ ColumnLayout {
                 return model.count > 0 ? model.count.toString() : ""
             }
             color: Kirigami.Theme.disabledTextColor
-            visible: {
+            visible: !selectionMode
+            Component.onCompleted: {
                 var model = threaded ? Pelliper.ThreadModel : Pelliper.MessageModel
-                return model.count > 0
+                visible = model.count > 0
             }
         }
 
-        Kirigami.Icon {
-            source: "view-sort"
-            Layout.preferredWidth: 16
-            Layout.preferredHeight: 16
+        Controls.ToolButton {
+            icon.name: "edit-select-all"
+            visible: !selectionMode
+            Controls.ToolTip.text: qsTr("Select messages")
+            Controls.ToolTip.visible: hovered
+            onClicked: {
+                selectionMode = true
+                selectAll()
+            }
+        }
+
+        Controls.ToolButton {
+            icon.name: "view-sort"
+            visible: !selectionMode
 
             Controls.Menu {
                 id: viewMenu
@@ -111,6 +195,79 @@ ColumnLayout {
         Layout.fillWidth: true
     }
 
+    // Bulk action bar
+    Controls.ToolBar {
+        Layout.fillWidth: true
+        visible: selectionMode
+        height: visible ? 40 : 0
+
+        RowLayout {
+            anchors.fill: parent
+            spacing: Kirigami.Units.smallSpacing
+            anchors.leftMargin: Kirigami.Units.smallSpacing
+            anchors.rightMargin: Kirigami.Units.smallSpacing
+
+            Controls.ToolButton {
+                icon.name: "edit-select-all"
+                Controls.ToolTip.text: qsTr("Select All")
+                Controls.ToolTip.visible: hovered
+                onClicked: selectAll()
+            }
+            Controls.ToolButton {
+                icon.name: "edit-select-none"
+                Controls.ToolTip.text: qsTr("Deselect All")
+                Controls.ToolTip.visible: hovered
+                onClicked: deselectAll()
+            }
+
+            Kirigami.Separator { Layout.fillHeight: true }
+
+            Controls.ToolButton {
+                icon.name: "mail-read"
+                Controls.ToolTip.text: qsTr("Mark Read")
+                Controls.ToolTip.visible: hovered
+                onClicked: performBulkAction("read")
+            }
+            Controls.ToolButton {
+                icon.name: "mail-unread"
+                Controls.ToolTip.text: qsTr("Mark Unread")
+                Controls.ToolTip.visible: hovered
+                onClicked: performBulkAction("unread")
+            }
+
+            Controls.ToolButton {
+                icon.name: "starred-symbolic"
+                Controls.ToolTip.text: qsTr("Star")
+                Controls.ToolTip.visible: hovered
+                onClicked: performBulkAction("star")
+            }
+            Controls.ToolButton {
+                icon.name: "non-starred-symbolic"
+                Controls.ToolTip.text: qsTr("Unstar")
+                Controls.ToolTip.visible: hovered
+                onClicked: performBulkAction("unstar")
+            }
+
+            Kirigami.Separator { Layout.fillHeight: true }
+
+            Controls.ToolButton {
+                icon.name: "user-trash"
+                Controls.ToolTip.text: qsTr("Move to Trash")
+                Controls.ToolTip.visible: hovered
+                onClicked: performBulkAction("delete")
+            }
+
+            Item { Layout.fillWidth: true }
+
+            Controls.ToolButton {
+                icon.name: "dialog-cancel"
+                Controls.ToolTip.text: qsTr("Cancel")
+                Controls.ToolTip.visible: hovered
+                onClicked: deselectAll()
+            }
+        }
+    }
+
     // Threaded view
     ListView {
         id: threadList
@@ -152,115 +309,138 @@ ColumnLayout {
             required property int index
 
             width: threadList.width
+            background: Rectangle {
+                color: messageRoot.isSelected(threadDelegate.accountId, threadDelegate.folderPath, threadDelegate.uid)
+                    ? Kirigami.Theme.highlightColor
+                    : "transparent"
+                opacity: messageRoot.isSelected(threadDelegate.accountId, threadDelegate.folderPath, threadDelegate.uid) ? 0.15 : 1
+            }
 
-            contentItem: ColumnLayout {
-                spacing: 2
+            contentItem: RowLayout {
+                spacing: Kirigami.Units.smallSpacing
 
-                // Subject and indicators row
-                RowLayout {
+                // Checkbox (selection mode)
+                Controls.CheckBox {
+                    visible: messageRoot.selectionMode
+                    checked: messageRoot.isSelected(threadDelegate.accountId, threadDelegate.folderPath, threadDelegate.uid)
+                    onClicked: messageRoot.toggleSelection(threadDelegate.accountId, threadDelegate.folderPath, threadDelegate.uid)
+                }
+
+                ColumnLayout {
                     Layout.fillWidth: true
+                    spacing: 2
 
-                    Controls.Label {
-                        text: threadDelegate.subject || qsTr("(no subject)")
-                        font.weight: threadDelegate.isRead ? Font.Normal : Font.Bold
-                        elide: Text.ElideRight
+                    // Subject and indicators row
+                    RowLayout {
                         Layout.fillWidth: true
-                    }
-
-                    // Reply count badge
-                    Rectangle {
-                        visible: threadDelegate.replyCount > 0
-                        Layout.preferredWidth: replyCountLabel.implicitWidth + Kirigami.Units.smallSpacing * 2
-                        Layout.preferredHeight: 18
-                        radius: 9
-                        color: Kirigami.Theme.disabledTextColor
 
                         Controls.Label {
-                            id: replyCountLabel
-                            anchors.centerIn: parent
-                            text: threadDelegate.replyCount.toString()
-                            font.pointSize: 8
-                            font.weight: Font.Bold
-                            color: Kirigami.Theme.backgroundColor
-                        }
-                    }
-
-                    // Star toggle
-                    Item {
-                        Layout.preferredWidth: 18
-                        Layout.preferredHeight: 18
-
-                        Kirigami.Icon {
-                            anchors.fill: parent
-                            source: threadDelegate.isStarred ? "starred-symbolic" : "non-starred-symbolic"
-                            color: threadDelegate.isStarred ? Kirigami.Theme.highlightColor : Kirigami.Theme.disabledTextColor
+                            text: threadDelegate.subject || qsTr("(no subject)")
+                            font.weight: threadDelegate.isRead ? Font.Normal : Font.Bold
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
                         }
 
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                threadDelegate.isStarred = !threadDelegate.isStarred
-                                Pelliper.DaemonClient.setMessageStarred(
-                                    threadDelegate.accountId,
-                                    threadDelegate.folderPath,
-                                    threadDelegate.uid,
-                                    threadDelegate.isStarred
-                                )
+                        // Reply count badge
+                        Rectangle {
+                            visible: threadDelegate.replyCount > 0
+                            Layout.preferredWidth: replyCountLabel.implicitWidth + Kirigami.Units.smallSpacing * 2
+                            Layout.preferredHeight: 18
+                            radius: 9
+                            color: Kirigami.Theme.disabledTextColor
+
+                            Controls.Label {
+                                id: replyCountLabel
+                                anchors.centerIn: parent
+                                text: threadDelegate.replyCount.toString()
+                                font.pointSize: 8
+                                font.weight: Font.Bold
+                                color: Kirigami.Theme.backgroundColor
                             }
                         }
+
+                        // Star toggle
+                        Item {
+                            Layout.preferredWidth: 18
+                            Layout.preferredHeight: 18
+                            visible: !messageRoot.selectionMode
+
+                            Kirigami.Icon {
+                                anchors.fill: parent
+                                source: threadDelegate.isStarred ? "starred-symbolic" : "non-starred-symbolic"
+                                color: threadDelegate.isStarred ? Kirigami.Theme.highlightColor : Kirigami.Theme.disabledTextColor
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    threadDelegate.isStarred = !threadDelegate.isStarred
+                                    Pelliper.DaemonClient.setMessageStarred(
+                                        threadDelegate.accountId,
+                                        threadDelegate.folderPath,
+                                        threadDelegate.uid,
+                                        threadDelegate.isStarred
+                                    )
+                                }
+                            }
+                        }
+
+                        Kirigami.Icon {
+                            source: "mail-attachment"
+                            Layout.preferredWidth: 14
+                            Layout.preferredHeight: 14
+                            visible: threadDelegate.hasAttachments
+                        }
                     }
 
-                    Kirigami.Icon {
-                        source: "mail-attachment"
-                        Layout.preferredWidth: 14
-                        Layout.preferredHeight: 14
-                        visible: threadDelegate.hasAttachments
+                    // Sender and date row
+                    RowLayout {
+                        Layout.fillWidth: true
+
+                        Controls.Label {
+                            text: threadDelegate.sender
+                            font.pointSize: 10
+                            color: Kirigami.Theme.disabledTextColor
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                        }
+
+                        Controls.Label {
+                            text: {
+                                if (threadDelegate.date <= 0) return ""
+                                var d = new Date(threadDelegate.date * 1000)
+                                var now = new Date()
+                                if (d.toDateString() === now.toDateString()) {
+                                    return Qt.formatTime(d, "HH:mm")
+                                }
+                                return Qt.formatDate(d, "MMM d")
+                            }
+                            font.pointSize: 10
+                            color: Kirigami.Theme.disabledTextColor
+                        }
                     }
-                }
 
-                // Sender and date row
-                RowLayout {
-                    Layout.fillWidth: true
-
+                    // Preview text
                     Controls.Label {
-                        text: threadDelegate.sender
+                        text: threadDelegate.preview
                         font.pointSize: 10
                         color: Kirigami.Theme.disabledTextColor
                         elide: Text.ElideRight
+                        maximumLineCount: 1
+                        visible: threadDelegate.preview.length > 0
                         Layout.fillWidth: true
                     }
-
-                    Controls.Label {
-                        text: {
-                            if (threadDelegate.date <= 0) return ""
-                            var d = new Date(threadDelegate.date * 1000)
-                            var now = new Date()
-                            if (d.toDateString() === now.toDateString()) {
-                                return Qt.formatTime(d, "HH:mm")
-                            }
-                            return Qt.formatDate(d, "MMM d")
-                        }
-                        font.pointSize: 10
-                        color: Kirigami.Theme.disabledTextColor
-                    }
-                }
-
-                // Preview text
-                Controls.Label {
-                    text: threadDelegate.preview
-                    font.pointSize: 10
-                    color: Kirigami.Theme.disabledTextColor
-                    elide: Text.ElideRight
-                    maximumLineCount: 1
-                    visible: threadDelegate.preview.length > 0
-                    Layout.fillWidth: true
                 }
             }
 
             onClicked: {
-                threadList.currentIndex = index
-                messageSelected(threadDelegate.accountId, threadDelegate.folderPath, threadDelegate.uid, threadDelegate.subject, threadDelegate.sender, threadDelegate.date, threadDelegate.isRead, threadDelegate.isStarred)
+                if (messageRoot.selectionMode) {
+                    messageRoot.toggleSelection(threadDelegate.accountId, threadDelegate.folderPath, threadDelegate.uid)
+                } else {
+                    threadList.currentIndex = index
+                    messageSelected(threadDelegate.accountId, threadDelegate.folderPath, threadDelegate.uid, threadDelegate.subject, threadDelegate.sender, threadDelegate.date, threadDelegate.isRead, threadDelegate.isStarred)
+                }
             }
 
             Controls.Menu {
@@ -354,97 +534,120 @@ ColumnLayout {
             required property int index
 
             width: messageList.width
+            background: Rectangle {
+                color: messageRoot.isSelected(msgDelegate.accountId, msgDelegate.folderPath, msgDelegate.uid)
+                    ? Kirigami.Theme.highlightColor
+                    : "transparent"
+                opacity: messageRoot.isSelected(msgDelegate.accountId, msgDelegate.folderPath, msgDelegate.uid) ? 0.15 : 1
+            }
 
-            contentItem: ColumnLayout {
-                spacing: 2
+            contentItem: RowLayout {
+                spacing: Kirigami.Units.smallSpacing
 
-                // Subject and star row
-                RowLayout {
+                // Checkbox (selection mode)
+                Controls.CheckBox {
+                    visible: messageRoot.selectionMode
+                    checked: messageRoot.isSelected(msgDelegate.accountId, msgDelegate.folderPath, msgDelegate.uid)
+                    onClicked: messageRoot.toggleSelection(msgDelegate.accountId, msgDelegate.folderPath, msgDelegate.uid)
+                }
+
+                ColumnLayout {
                     Layout.fillWidth: true
+                    spacing: 2
 
-                    Controls.Label {
-                        text: msgDelegate.subject || qsTr("(no subject)")
-                        font.weight: msgDelegate.isRead ? Font.Normal : Font.Bold
-                        elide: Text.ElideRight
+                    // Subject and star row
+                    RowLayout {
                         Layout.fillWidth: true
-                    }
 
-                    // Star toggle
-                    Item {
-                        Layout.preferredWidth: 18
-                        Layout.preferredHeight: 18
+                        Controls.Label {
+                            text: msgDelegate.subject || qsTr("(no subject)")
+                            font.weight: msgDelegate.isRead ? Font.Normal : Font.Bold
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                        }
+
+                        // Star toggle
+                        Item {
+                            Layout.preferredWidth: 18
+                            Layout.preferredHeight: 18
+                            visible: !messageRoot.selectionMode
+
+                            Kirigami.Icon {
+                                anchors.fill: parent
+                                source: msgDelegate.isStarred ? "starred-symbolic" : "non-starred-symbolic"
+                                color: msgDelegate.isStarred ? Kirigami.Theme.highlightColor : Kirigami.Theme.disabledTextColor
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    msgDelegate.isStarred = !msgDelegate.isStarred
+                                    Pelliper.DaemonClient.setMessageStarred(
+                                        msgDelegate.accountId,
+                                        msgDelegate.folderPath,
+                                        msgDelegate.uid,
+                                        msgDelegate.isStarred
+                                    )
+                                }
+                            }
+                        }
 
                         Kirigami.Icon {
-                            anchors.fill: parent
-                            source: msgDelegate.isStarred ? "starred-symbolic" : "non-starred-symbolic"
-                            color: msgDelegate.isStarred ? Kirigami.Theme.highlightColor : Kirigami.Theme.disabledTextColor
+                            source: "mail-attachment"
+                            Layout.preferredWidth: 14
+                            Layout.preferredHeight: 14
+                            visible: msgDelegate.hasAttachments
+                        }
+                    }
+
+                    // Sender and date row
+                    RowLayout {
+                        Layout.fillWidth: true
+
+                        Controls.Label {
+                            text: msgDelegate.sender
+                            font.pointSize: 10
+                            color: Kirigami.Theme.disabledTextColor
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
                         }
 
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                msgDelegate.isStarred = !msgDelegate.isStarred
-                                Pelliper.DaemonClient.setMessageStarred(
-                                    msgDelegate.accountId,
-                                    msgDelegate.folderPath,
-                                    msgDelegate.uid,
-                                    msgDelegate.isStarred
-                                )
+                        Controls.Label {
+                            text: {
+                                if (msgDelegate.date <= 0) return ""
+                                var d = new Date(msgDelegate.date * 1000)
+                                var now = new Date()
+                                if (d.toDateString() === now.toDateString()) {
+                                    return Qt.formatTime(d, "HH:mm")
+                                }
+                                return Qt.formatDate(d, "MMM d")
                             }
+                            font.pointSize: 10
+                            color: Kirigami.Theme.disabledTextColor
                         }
                     }
 
-                    Kirigami.Icon {
-                        source: "mail-attachment"
-                        Layout.preferredWidth: 14
-                        Layout.preferredHeight: 14
-                        visible: msgDelegate.hasAttachments
-                    }
-                }
-
-                // Sender and date row
-                RowLayout {
-                    Layout.fillWidth: true
-
+                    // Preview text
                     Controls.Label {
-                        text: msgDelegate.sender
+                        text: msgDelegate.preview
                         font.pointSize: 10
                         color: Kirigami.Theme.disabledTextColor
                         elide: Text.ElideRight
+                        maximumLineCount: 1
+                        visible: msgDelegate.preview.length > 0
                         Layout.fillWidth: true
                     }
-
-                    Controls.Label {
-                        text: {
-                            if (msgDelegate.date <= 0) return ""
-                            var d = new Date(msgDelegate.date * 1000)
-                            var now = new Date()
-                            if (d.toDateString() === now.toDateString()) {
-                                return Qt.formatTime(d, "HH:mm")
-                            }
-                            return Qt.formatDate(d, "MMM d")
-                        }
-                        font.pointSize: 10
-                        color: Kirigami.Theme.disabledTextColor
-                    }
-                }
-
-                // Preview text
-                Controls.Label {
-                    text: msgDelegate.preview
-                    font.pointSize: 10
-                    color: Kirigami.Theme.disabledTextColor
-                    elide: Text.ElideRight
-                    maximumLineCount: 1
-                    visible: msgDelegate.preview.length > 0
-                    Layout.fillWidth: true
                 }
             }
 
             onClicked: {
-                messageList.currentIndex = index
-                messageSelected(msgDelegate.accountId, msgDelegate.folderPath, msgDelegate.uid, msgDelegate.subject, msgDelegate.sender, msgDelegate.date, msgDelegate.isRead, msgDelegate.isStarred)
+                if (messageRoot.selectionMode) {
+                    messageRoot.toggleSelection(msgDelegate.accountId, msgDelegate.folderPath, msgDelegate.uid)
+                } else {
+                    messageList.currentIndex = index
+                    messageSelected(msgDelegate.accountId, msgDelegate.folderPath, msgDelegate.uid, msgDelegate.subject, msgDelegate.sender, msgDelegate.date, msgDelegate.isRead, msgDelegate.isStarred)
+                }
             }
 
             Controls.Menu {
