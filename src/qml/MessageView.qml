@@ -28,6 +28,12 @@ Kirigami.Page {
     property bool hasRemoteContent: false
     property bool senderIsKnown: false
     property string hoveredLink: ""
+    property string senderEmail: {
+        var match = sender.match(/<([^>]+)>/)
+        if (match) return match[1]
+        if (sender.indexOf("@") >= 0) return sender.trim()
+        return ""
+    }
 
     Kirigami.PlaceholderMessage {
         anchors.centerIn: parent
@@ -143,6 +149,24 @@ Kirigami.Page {
             RowLayout {
                 Layout.fillWidth: true
                 spacing: Kirigami.Units.smallSpacing
+
+                // Gravatar avatar
+                Image {
+                    Layout.preferredWidth: 32
+                    Layout.preferredHeight: 32
+                    source: messageView.senderEmail.length > 0
+                        ? Pelliper.DaemonClient.gravatarUrl(messageView.senderEmail, 64)
+                        : ""
+                    visible: source.length > 0
+                    fillMode: Image.PreserveAspectCrop
+
+                    BusyIndicator {
+                        anchors.centerIn: parent
+                        running: parent.status === Image.Loading
+                        width: 24
+                        height: 24
+                    }
+                }
 
                 Controls.Label {
                     text: messageView.sender

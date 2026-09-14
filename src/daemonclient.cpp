@@ -5,6 +5,7 @@
 #include <QDBusPendingCall>
 #include <QDBusPendingReply>
 #include <QFile>
+#include <QCryptographicHash>
 
 static const QString SERVICE = QStringLiteral("org.kde.pelliper.Daemon");
 static const QString PATH = QStringLiteral("/org/kde/pelliper/Daemon");
@@ -447,4 +448,13 @@ void DaemonClient::loadSenderPolicies()
         watcher->deleteLater();
         Q_EMIT senderPoliciesLoaded(reply.isError() ? QStringLiteral("[]") : reply.value());
     });
+}
+
+QString DaemonClient::gravatarUrl(const QString &email, int size)
+{
+    if (email.isEmpty()) return QString();
+    QString trimmed = email.trimmed().toLower();
+    QByteArray hash = QCryptographicHash::hash(trimmed.toUtf8(), QCryptographicHash::Md5);
+    return QStringLiteral("https://www.gravatar.com/avatar/%1?s=%2&d=mm")
+        .arg(QString::fromLatin1(hash.toHex()), QString::number(size));
 }

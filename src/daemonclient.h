@@ -49,6 +49,7 @@ public:
     Q_INVOKABLE void blockSender(const QString &email);
     Q_INVOKABLE void unblockSender(const QString &email);
     Q_INVOKABLE void loadSenderPolicies();
+    Q_INVOKABLE QString gravatarUrl(const QString &email, int size = 80);
     Q_INVOKABLE void loadBody(qint64 accountId, const QString &folderPath, qint64 uid);
     Q_INVOKABLE void listAttachments(qint64 accountId, const QString &folderPath, qint64 uid);
     Q_INVOKABLE bool copyFile(const QString &srcPath, const QString &destPath);

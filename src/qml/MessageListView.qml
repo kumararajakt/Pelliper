@@ -14,6 +14,13 @@ ColumnLayout {
     property bool selectionMode: false
     property var selectedItems: ({})
 
+    function extractEmail(sender) {
+        var match = sender.match(/<([^>]+)>/)
+        if (match) return match[1]
+        if (sender.indexOf("@") >= 0) return sender.trim()
+        return ""
+    }
+
     function toggleSelection(accountId, folderPath, uid) {
         var key = accountId + ":" + folderPath + ":" + uid
         var copy = JSON.parse(JSON.stringify(selectedItems))
@@ -398,6 +405,19 @@ ColumnLayout {
                     RowLayout {
                         Layout.fillWidth: true
 
+                        Image {
+                            Layout.preferredWidth: 20
+                            Layout.preferredHeight: 20
+                            source: messageRoot.extractEmail(threadDelegate.sender).length > 0
+                                ? Pelliper.DaemonClient.gravatarUrl(messageRoot.extractEmail(threadDelegate.sender), 40)
+                                : ""
+                            visible: source.length > 0
+                            Layout.rightMargin: Kirigami.Units.smallSpacing
+                            fillMode: Image.PreserveAspectCrop
+                            layer.enabled: true
+                            layer.effect: null
+                        }
+
                         Controls.Label {
                             text: threadDelegate.sender
                             font.pointSize: 10
@@ -604,6 +624,19 @@ ColumnLayout {
                     // Sender and date row
                     RowLayout {
                         Layout.fillWidth: true
+
+                        Image {
+                            Layout.preferredWidth: 20
+                            Layout.preferredHeight: 20
+                            source: messageRoot.extractEmail(msgDelegate.sender).length > 0
+                                ? Pelliper.DaemonClient.gravatarUrl(messageRoot.extractEmail(msgDelegate.sender), 40)
+                                : ""
+                            visible: source.length > 0
+                            Layout.rightMargin: Kirigami.Units.smallSpacing
+                            fillMode: Image.PreserveAspectCrop
+                            layer.enabled: true
+                            layer.effect: null
+                        }
 
                         Controls.Label {
                             text: msgDelegate.sender
