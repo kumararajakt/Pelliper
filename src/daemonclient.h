@@ -46,6 +46,9 @@ public:
     Q_INVOKABLE void deleteFolder(qint64 accountId, const QString &name);
     Q_INVOKABLE void searchAddresses(const QString &query);
     Q_INVOKABLE bool isKnownAddress(const QString &email);
+    Q_INVOKABLE void blockSender(const QString &email);
+    Q_INVOKABLE void unblockSender(const QString &email);
+    Q_INVOKABLE void loadSenderPolicies();
     Q_INVOKABLE void loadBody(qint64 accountId, const QString &folderPath, qint64 uid);
     Q_INVOKABLE void listAttachments(qint64 accountId, const QString &folderPath, qint64 uid);
     Q_INVOKABLE bool copyFile(const QString &srcPath, const QString &destPath);
@@ -75,6 +78,7 @@ Q_SIGNALS:
     void accountRemoved(qint64 accountId);
     void emailSent(const QString &error);
     void addressResults(const QString &json);
+    void senderPoliciesLoaded(const QString &json);
 
 private Q_SLOTS:
     void onAddAccountReply(QDBusPendingCallWatcher *watcher);

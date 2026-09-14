@@ -412,3 +412,39 @@ bool DaemonClient::isKnownAddress(const QString &email)
     }
     return false;
 }
+
+void DaemonClient::blockSender(const QString &email)
+{
+    if (!m_available) return;
+
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        SERVICE, PATH, INTERFACE, QStringLiteral("BlockSender"));
+    msg.setArguments({email});
+    QDBusConnection::sessionBus().asyncCall(msg);
+}
+
+void DaemonClient::unblockSender(const QString &email)
+{
+    if (!m_available) return;
+
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        SERVICE, PATH, INTERFACE, QStringLiteral("UnblockSender"));
+    msg.setArguments({email});
+    QDBusConnection::sessionBus().asyncCall(msg);
+}
+
+void DaemonClient::loadSenderPolicies()
+{
+    if (!m_available) return;
+
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        SERVICE, PATH, INTERFACE, QStringLiteral("LoadSenderPolicies"));
+
+    QDBusPendingCall call = QDBusConnection::sessionBus().asyncCall(msg);
+    auto *watcher = new QDBusPendingCallWatcher(call, this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher]() {
+        QDBusPendingReply<QString> reply = *watcher;
+        watcher->deleteLater();
+        Q_EMIT senderPoliciesLoaded(reply.isError() ? QStringLiteral("[]") : reply.value());
+    });
+}

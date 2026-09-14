@@ -170,6 +170,64 @@ Kirigami.Page {
                 applicationWindow().showPassiveNotification(qsTr("Signature saved"))
             }
         }
+
+        Kirigami.Separator {
+            Layout.fillWidth: true
+        }
+
+        Kirigami.Heading {
+            text: qsTr("Blocked Senders")
+            level: 2
+            Layout.fillWidth: true
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Kirigami.Units.smallSpacing
+
+            Controls.TextField {
+                id: blockEmailField
+                Layout.fillWidth: true
+                placeholderText: qsTr("Email address to block")
+            }
+
+            Controls.Button {
+                text: qsTr("Block")
+                icon.name: "dialog-cancel"
+                enabled: blockEmailField.text.trim().length > 0
+                onClicked: {
+                    Pelliper.DaemonClient.blockSender(blockEmailField.text.trim())
+                    blockEmailField.text = ""
+                    Pelliper.DaemonClient.loadSenderPolicies()
+                }
+            }
+        }
+
+        Repeater {
+            model: ListModel { id: blockedListModel }
+
+            delegate: RowLayout {
+                Layout.fillWidth: true
+                Kirigami.Icon {
+                    source: "dialog-cancel"
+                    Layout.preferredWidth: 16
+                    Layout.preferredHeight: 16
+                }
+                Controls.Label {
+                    text: model.email
+                    Layout.fillWidth: true
+                }
+                Controls.ToolButton {
+                    icon.name: "edit-clear"
+                    onClicked: {
+                        Pelliper.DaemonClient.unblockSender(model.email)
+                        Pelliper.DaemonClient.loadSenderPolicies()
+                    }
+                }
+            }
+        }
+
+        Component.onCompleted: Pelliper.DaemonClient.loadSenderPolicies()
     }
 
     Controls.Dialog {
@@ -296,6 +354,17 @@ Kirigami.Page {
             if (Pelliper.AccountModel.count === 0) {
                 settingsPage.emptyStateRequested()
             }
+        }
+        function onSenderPoliciesLoaded(json) {
+            blockedListModel.clear()
+            try {
+                var arr = JSON.parse(json)
+                for (var i = 0; i < arr.length; i++) {
+                    if (arr[i].blocked) {
+                        blockedListModel.append({ email: arr[i].email })
+                    }
+                }
+            } catch (e) {}
         }
     }
 }
