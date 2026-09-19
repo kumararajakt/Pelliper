@@ -83,11 +83,11 @@ Kirigami.Page {
 
                     Controls.ToolButton {
                         icon.name: "user-trash"
-                        onClicked: removeConfirmDialog.open(accountCard.id, accountCard.email)
+                        onClicked: removeConfirmDialog.openDialog(accountCard.id, accountCard.email)
                     }
                 }
 
-                onClicked: accountSettingsDialog.open(accountCard.id, accountCard.email, accountCard.displayName, accountCard.authType)
+                onClicked: accountSettingsDialog.openDialog(accountCard.id, accountCard.email, accountCard.displayName, accountCard.authType)
             }
         }
 
@@ -241,7 +241,7 @@ Kirigami.Page {
         property int targetId: -1
         property string targetEmail: ""
 
-        function open(id, email) {
+        function openDialog(id, email) {
             targetId = id
             targetEmail = email
             open()
@@ -282,7 +282,7 @@ Kirigami.Page {
         property string targetDisplayName: ""
         property string targetAuthType: ""
 
-        function open(id, email, displayName, authType) {
+        function openDialog(id, email, displayName, authType) {
             targetId = id
             targetEmail = email
             targetDisplayName = displayName
@@ -338,7 +338,7 @@ Kirigami.Page {
                 Layout.alignment: Qt.AlignLeft
                 onClicked: {
                     accountSettingsDialog.close()
-                    removeConfirmDialog.open(accountSettingsDialog.targetId, accountSettingsDialog.targetEmail)
+                    removeConfirmDialog.openDialog(accountSettingsDialog.targetId, accountSettingsDialog.targetEmail)
                 }
             }
         }
