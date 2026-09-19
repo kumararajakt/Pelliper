@@ -79,8 +79,13 @@ public:
     /// Find the QModelIndex for a given account+path, or invalid if not found.
     Q_INVOKABLE QModelIndex indexForPath(int accountId, const QString &path) const;
 
+    /// Track expand/collapse state so it survives model resets.
+    Q_INVOKABLE void setPathExpanded(const QString &path, bool expanded);
+
 Q_SIGNALS:
     void countChanged();
+    /// Emitted after a rebuild so QML can re-expand previously open rows.
+    void needsExpansion(const QStringList &paths);
 
 private:
     Q_SLOT void onFileChanged(const QString &path);
@@ -105,6 +110,8 @@ private:
 
     TreeNode *m_root = nullptr;
     int m_totalCount = 0;
+    QSet<QString> m_expandedPaths;
+    QList<RawFolder> m_prevRawFolders;
 
     QFileSystemWatcher m_watcher;
     QTimer m_refreshTimer;

@@ -30,8 +30,8 @@ FolderModel::FolderModel(QObject *parent)
     , m_root(new TreeNode)
 {
     m_refreshTimer.setSingleShot(true);
-    // m_refreshTimer.setInterval(500);
-    // connect(&m_refreshTimer, &QTimer::timeout, this, &FolderModel::refresh);
+    m_refreshTimer.setInterval(500);
+    connect(&m_refreshTimer, &QTimer::timeout, this, &FolderModel::refresh);
     refresh();
     startWatching();
 }
@@ -164,8 +164,8 @@ QString FolderModel::iconNameFromPath(const QString &path)
 
 void FolderModel::refresh()
 {
-    m_rawFolders.clear();
-    m_accountEmails.clear();
+    QList<RawFolder> newRawFolders;
+    QMap<int, QString> newAccountEmails;
 
     QString dbPath = cacheDbPath();
     if (!QFile::exists(dbPath)) {
@@ -195,14 +195,14 @@ void FolderModel::refresh()
                 rf.path = query.value(1).toString();
                 rf.unreadCount = query.value(2).toInt();
                 rf.noselect = query.value(3).toBool();
-                m_rawFolders.append(rf);
+                newRawFolders.append(rf);
             }
         }
 
         QSqlQuery acctQuery(db);
         if (acctQuery.exec(QStringLiteral("SELECT id, email FROM accounts"))) {
             while (acctQuery.next()) {
-                m_accountEmails.insert(acctQuery.value(0).toInt(), acctQuery.value(1).toString());
+                newAccountEmails.insert(acctQuery.value(0).toInt(), acctQuery.value(1).toString());
             }
         }
 
@@ -210,7 +210,60 @@ void FolderModel::refresh()
     }
     QSqlDatabase::removeDatabase(DB_CONN);
 
-    rebuildTree();
+    // Determine what changed
+    bool structureChanged = false;
+
+    // Check if folder set changed (additions or removals)
+    QSet<QString> oldKeys, newKeys;
+    for (const auto &rf : std::as_const(m_prevRawFolders)) {
+        if (!rf.noselect)
+            oldKeys.insert(QString::number(rf.accountId) + QLatin1Char(':') + rf.path);
+    }
+    for (const auto &rf : std::as_const(newRawFolders)) {
+        if (!rf.noselect)
+            newKeys.insert(QString::number(rf.accountId) + QLatin1Char(':') + rf.path);
+    }
+    if (oldKeys != newKeys)
+        structureChanged = true;
+
+    // Check if account set changed
+    if (!structureChanged) {
+        QSet<int> oldAccts, newAccts;
+        for (const auto &rf : std::as_const(m_prevRawFolders))
+            oldAccts.insert(rf.accountId);
+        for (const auto &rf : std::as_const(newRawFolders))
+            newAccts.insert(rf.accountId);
+        if (oldAccts != newAccts)
+            structureChanged = true;
+    }
+
+    // Update raw data
+    m_rawFolders = newRawFolders;
+    m_accountEmails = newAccountEmails;
+
+    if (structureChanged || m_root->children.isEmpty()) {
+        // Structural change: full rebuild
+        m_prevRawFolders = newRawFolders;
+        rebuildTree();
+    } else {
+        // Only data changed (unread counts): update in place
+        bool anyChanged = false;
+        for (const auto &rf : std::as_const(newRawFolders)) {
+            if (rf.noselect)
+                continue;
+            QModelIndex idx = indexForPath(rf.accountId, rf.path);
+            if (!idx.isValid())
+                continue;
+            auto *node = static_cast<TreeNode *>(idx.internalPointer());
+            if (node->entry.unreadCount != rf.unreadCount) {
+                node->entry.unreadCount = rf.unreadCount;
+                Q_EMIT dataChanged(idx, idx, { UnreadCountRole });
+                anyChanged = true;
+            }
+        }
+        if (anyChanged)
+            Q_EMIT countChanged();
+    }
 }
 
 void FolderModel::rebuildTree()
@@ -338,12 +391,25 @@ void FolderModel::rebuildTree()
 
     endResetModel();
     Q_EMIT countChanged();
+
+    // Re-expand previously open rows
+    if (!m_expandedPaths.isEmpty()) {
+        Q_EMIT needsExpansion(m_expandedPaths.values());
+    }
 }
 
 void FolderModel::refreshForAccount(int accountId)
 {
     Q_UNUSED(accountId)
     rebuildTree();
+}
+
+void FolderModel::setPathExpanded(const QString &path, bool expanded)
+{
+    if (expanded)
+        m_expandedPaths.insert(path);
+    else
+        m_expandedPaths.remove(path);
 }
 
 QModelIndex FolderModel::indexForPath(int accountId, const QString &path) const

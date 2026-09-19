@@ -64,10 +64,48 @@ Controls.ScrollView {
         }
     }
 
+    Connections {
+        target: Pelliper.FolderModel
+        function onNeedsExpansion(paths) {
+            Qt.callLater(function() {
+                var roles = Pelliper.FolderModel.roleNames
+                var pathRole = 0, acidRole = 0, headerRole = 0
+                for (var key in roles) {
+                    if (roles[key] === "path") pathRole = Number(key)
+                    if (roles[key] === "accountId") acidRole = Number(key)
+                    if (roles[key] === "isAccountHeader") headerRole = Number(key)
+                }
+                for (var i = 0; i < treeView.rows; i++) {
+                    var idx = Pelliper.FolderModel.index(i, 0)
+                    var isHeader = Pelliper.FolderModel.data(idx, headerRole)
+                    var expandKey
+                    if (isHeader) {
+                        expandKey = "account:" + Pelliper.FolderModel.data(idx, acidRole)
+                    } else {
+                        expandKey = Pelliper.FolderModel.data(idx, pathRole)
+                    }
+                    if (paths.indexOf(expandKey) >= 0)
+                        treeView.expand(i)
+                }
+            })
+        }
+    }
+
     Component.onCompleted: {
-        // Expand the first account by default
         if (Pelliper.FolderModel.count > 0) {
             treeView.expand(0)
+            // Track the first account as expanded
+            var roles = Pelliper.FolderModel.roleNames
+            var acidRole = 0
+            for (var key in roles) {
+                if (roles[key] === "accountId") {
+                    acidRole = Number(key)
+                    break
+                }
+            }
+            var idx = Pelliper.FolderModel.index(0, 0)
+            var acid = Pelliper.FolderModel.data(idx, acidRole)
+            Pelliper.FolderModel.setPathExpanded("account:" + acid, true)
         }
     }
 }

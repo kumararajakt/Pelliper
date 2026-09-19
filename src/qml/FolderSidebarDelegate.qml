@@ -50,12 +50,16 @@ Controls.ItemDelegate {
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        if (item.expanded)
-                            treeView.collapse(item.row)
-                        else
-                            treeView.expand(item.row)
+                onClicked: {
+                    var key = item.isAccountHeader ? "account:" + item.accountId : item.path
+                    if (item.expanded) {
+                        treeView.collapse(item.row)
+                        Pelliper.FolderModel.setPathExpanded(key, false)
+                    } else {
+                        treeView.expand(item.row)
+                        Pelliper.FolderModel.setPathExpanded(key, true)
                     }
+                }
                 }
             }
         }
@@ -101,17 +105,16 @@ Controls.ItemDelegate {
 
     onClicked: {
         if (item.hasChildren) {
-            // Toggle expand/collapse for any row with children
-            if (item.expanded)
+            var key = item.isAccountHeader ? "account:" + item.accountId : item.path
+            if (item.expanded) {
                 treeView.collapse(item.row)
-            else
+                Pelliper.FolderModel.setPathExpanded(key, false)
+            } else {
                 treeView.expand(item.row)
+                Pelliper.FolderModel.setPathExpanded(key, true)
+            }
         }
         if (!item.isAccountHeader) {
-            treeView.selectionModel.setCurrentIndex(
-                treeView.model.index(item.row, item.column),
-                Controls.ItemSelectionModel.ClearAndSelect
-            )
             item.folderSelected(item.accountId, item.path)
             item.saveSelection(item.accountId, item.path)
         }
