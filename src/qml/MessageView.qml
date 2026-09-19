@@ -182,7 +182,7 @@ Kirigami.Page {
                     visible: source.length > 0
                     fillMode: Image.PreserveAspectCrop
 
-                    BusyIndicator {
+                    Controls.BusyIndicator {
                         anchors.centerIn: parent
                         running: parent.status === Image.Loading
                         width: 24

@@ -7,8 +7,8 @@ import org.kde.pelliper as Pelliper
 Kirigami.ApplicationWindow {
     id: root
 
-    width: 1200
-    height: 800
+    width: Kirigami.Units.gridUnit * 90
+    height: Kirigami.Units.gridUnit * 55
     visible: true
 
     title: "Pelliper"
