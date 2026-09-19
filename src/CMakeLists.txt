@@ -39,6 +39,7 @@ ecm_target_qml_sources(pelliper
     qml/AddAccountPage.qml
     qml/ComposePage.qml
     qml/FolderSidebar.qml
+    qml/FolderSidebarDelegate.qml
     qml/MessageListView.qml
     qml/MessageView.qml
     qml/SettingsPage.qml

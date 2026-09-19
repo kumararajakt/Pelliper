@@ -26,13 +26,19 @@ int FolderModel::depthFromPath(const QString &path)
 }
 
 FolderModel::FolderModel(QObject *parent)
-    : QAbstractListModel(parent)
+    : QAbstractItemModel(parent)
+    , m_root(new TreeNode)
 {
     m_refreshTimer.setSingleShot(true);
-    m_refreshTimer.setInterval(500);
-    connect(&m_refreshTimer, &QTimer::timeout, this, &FolderModel::refresh);
+    // m_refreshTimer.setInterval(500);
+    // connect(&m_refreshTimer, &QTimer::timeout, this, &FolderModel::refresh);
     refresh();
     startWatching();
+}
+
+FolderModel::~FolderModel()
+{
+    delete m_root;
 }
 
 void FolderModel::startWatching()
@@ -163,7 +169,7 @@ void FolderModel::refresh()
 
     QString dbPath = cacheDbPath();
     if (!QFile::exists(dbPath)) {
-        rebuildFlatList();
+        rebuildTree();
         return;
     }
 
@@ -176,7 +182,7 @@ void FolderModel::refresh()
 
         if (!db.open()) {
             qWarning() << "FolderModel: failed to open cache.db:" << db.lastError().text();
-            rebuildFlatList();
+            rebuildTree();
             return;
         }
 
@@ -204,133 +210,131 @@ void FolderModel::refresh()
     }
     QSqlDatabase::removeDatabase(DB_CONN);
 
-    rebuildFlatList();
+    rebuildTree();
 }
 
-void FolderModel::rebuildFlatList()
+void FolderModel::rebuildTree()
 {
     beginResetModel();
-    m_folders.clear();
-    m_hasChildren.clear();
+    delete m_root;
+    m_root = new TreeNode;
+    m_totalCount = 0;
 
-    // Build set of raw paths that have children
-    for (const auto &rf : std::as_const(m_rawFolders)) {
-        if (rf.noselect) continue;
-        for (const auto &other : std::as_const(m_rawFolders)) {
-            if (other.path == rf.path || other.noselect) continue;
-            if (other.path.startsWith(rf.path + QLatin1Char('/'))) {
-                m_hasChildren.insert(rf.path);
-                break;
-            }
-        }
-    }
-
-    // Classify into essentials and customs per account
-    QMap<int, QList<FolderEntry>> essentialsByAccount;
-    QMap<int, QList<FolderEntry>> customsByAccount;
-
-    for (const auto &rf : std::as_const(m_rawFolders)) {
-        if (rf.noselect) continue;
-
-        FolderEntry entry;
-        entry.accountId = rf.accountId;
-        entry.path = rf.path;
-        entry.unreadCount = rf.unreadCount;
-        entry.role = classifyFolder(rf.path);
-        entry.isEssential = (entry.role != FolderRole::Custom);
-        entry.displayName = displayNameFromPath(rf.path);
-        entry.iconName = iconNameFromPath(rf.path);
-        entry.depth = entry.isEssential ? 0 : FolderModel::depthFromPath(rf.path);
-        entry.hasChildren = m_hasChildren.contains(rf.path);
-        entry.noselect = false;
-        entry.isAccountHeader = false;
-        entry.isExpanded = false;
-
-        if (entry.isEssential)
-            essentialsByAccount[rf.accountId].append(entry);
-        else
-            customsByAccount[rf.accountId].append(entry);
-    }
-
-    // Sort essentials by role order
-    for (auto it = essentialsByAccount.begin(); it != essentialsByAccount.end(); ++it) {
-        std::sort(it.value().begin(), it.value().end(), [](const FolderEntry &a, const FolderEntry &b) {
-            return folderOrder(a.role) < folderOrder(b.role);
-        });
-    }
-
-    // Sort customs in tree order: parents before children
-    for (auto it = customsByAccount.begin(); it != customsByAccount.end(); ++it) {
-        std::sort(it.value().begin(), it.value().end(), [](const FolderEntry &a, const FolderEntry &b) {
-            if (b.path.startsWith(a.path + QLatin1Char('/'))) return true;
-            if (a.path.startsWith(b.path + QLatin1Char('/'))) return false;
-            return a.path.toLower() < b.path.toLower();
-        });
-    }
-
-    // Filter custom folders: hide children whose parent is not expanded
-    QMap<int, QList<FolderEntry>> visibleCustoms;
-    for (auto it = customsByAccount.constBegin(); it != customsByAccount.constEnd(); ++it) {
-        for (const auto &entry : it.value()) {
-            int lastSep = entry.path.lastIndexOf(QLatin1Char('/'));
-            if (lastSep > 0) {
-                QString parentPath = entry.path.left(lastSep);
-                if (parentPath.startsWith(QLatin1Char('['))) {
-                    int closeBracket = parentPath.indexOf(QLatin1Char(']'));
-                    if (closeBracket >= 0 && closeBracket + 1 >= parentPath.size())
-                        parentPath.clear();
-                    else if (closeBracket >= 0 && closeBracket + 1 < parentPath.size() && parentPath[closeBracket + 1] == QLatin1Char('/'))
-                        parentPath = parentPath.mid(closeBracket + 2);
-                }
-                if (!parentPath.isEmpty() && !m_expanded.contains(parentPath))
-                    continue;
-            }
-            visibleCustoms[it.key()].append(entry);
-        }
-    }
-
-    // Assemble: account headers + their folders
+    // Group raw folders by account, preserving order of first appearance
     QList<int> accountIds;
     QSet<int> seen;
-    for (const auto &entry : std::as_const(m_rawFolders)) {
-        if (entry.noselect) continue;
-        if (!seen.contains(entry.accountId)) {
-            seen.insert(entry.accountId);
-            accountIds.append(entry.accountId);
+    QMap<int, QList<RawFolder>> foldersByAccount;
+
+    for (const auto &rf : std::as_const(m_rawFolders)) {
+        if (rf.noselect)
+            continue;
+        foldersByAccount[rf.accountId].append(rf);
+        if (!seen.contains(rf.accountId)) {
+            seen.insert(rf.accountId);
+            accountIds.append(rf.accountId);
         }
     }
 
+    // Build tree for each account
     for (int acid : accountIds) {
-        // Ensure first account is expanded by default
-        if (m_accountsExpanded.isEmpty())
-            m_accountsExpanded.insert(acid);
+        const auto &folders = foldersByAccount[acid];
 
-        FolderEntry header;
-        header.accountId = acid;
-        header.isAccountHeader = true;
-        header.email = m_accountEmails.value(acid);
-        header.displayName = m_accountEmails.value(acid);
-        header.iconName = QStringLiteral("user");
-        header.isExpanded = m_accountsExpanded.contains(acid);
-        header.hasChildren = true;
-        header.unreadCount = 0;
-        header.depth = 0;
-        header.noselect = false;
-        header.role = FolderRole::Custom;
-        header.isEssential = false;
-        m_folders.append(header);
+        // Create account header node
+        auto *accountNode = new TreeNode;
+        accountNode->entry.accountId = acid;
+        accountNode->entry.isAccountHeader = true;
+        accountNode->entry.email = m_accountEmails.value(acid);
+        accountNode->entry.displayName = m_accountEmails.value(acid);
+        accountNode->entry.iconName = QStringLiteral("user");
+        accountNode->entry.isEssential = false;
+        accountNode->parentNode = m_root;
+        m_root->children.append(accountNode);
+        ++m_totalCount;
 
-        if (m_accountsExpanded.contains(acid)) {
-            for (const auto &entry : std::as_const(essentialsByAccount[acid]))
-                m_folders.append(entry);
-            for (const auto &entry : std::as_const(visibleCustoms[acid]))
-                m_folders.append(entry);
+        // Separate essential and custom folders
+        QList<FolderEntry> essentials;
+        QList<RawFolder> customs;
+
+        for (const auto &rf : folders) {
+            FolderEntry entry;
+            entry.accountId = acid;
+            entry.path = rf.path;
+            entry.unreadCount = rf.unreadCount;
+            entry.role = classifyFolder(rf.path);
+            entry.isEssential = (entry.role != FolderRole::Custom);
+            entry.displayName = displayNameFromPath(rf.path);
+            entry.iconName = iconNameFromPath(rf.path);
+
+            if (entry.isEssential) {
+                essentials.append(entry);
+            } else {
+                customs.append(rf);
+            }
+        }
+
+        // Sort essentials by role order
+        std::sort(essentials.begin(), essentials.end(),
+                  [](const FolderEntry &a, const FolderEntry &b) {
+                      return folderOrder(a.role) < folderOrder(b.role);
+                  });
+
+        // Add essential folders as direct children of account node
+        for (const auto &entry : std::as_const(essentials)) {
+            auto *node = new TreeNode;
+            node->entry = entry;
+            node->parentNode = accountNode;
+            accountNode->children.append(node);
+            ++m_totalCount;
+        }
+
+        // Build custom folder tree
+        // Sort customs in tree order: parents before children, then alphabetically
+        std::sort(customs.begin(), customs.end(),
+                  [](const RawFolder &a, const RawFolder &b) {
+                      if (b.path.startsWith(a.path + QLatin1Char('/')))
+                          return true;
+                      if (a.path.startsWith(b.path + QLatin1Char('/')))
+                          return false;
+                      return a.path.toLower() < b.path.toLower();
+                  });
+
+        // Map from path to node for quick parent lookup
+        QMap<QString, TreeNode *> customNodes;
+
+        for (const auto &rf : std::as_const(customs)) {
+            FolderEntry entry;
+            entry.accountId = acid;
+            entry.path = rf.path;
+            entry.unreadCount = rf.unreadCount;
+            entry.role = FolderRole::Custom;
+            entry.isEssential = false;
+            entry.displayName = displayNameFromPath(rf.path);
+            entry.iconName = iconNameFromPath(rf.path);
+
+            auto *node = new TreeNode;
+            node->entry = entry;
+
+            // Find parent: longest prefix path already in customNodes,
+            // otherwise attach directly under the account header.
+            TreeNode *parent = accountNode;
+            QString parentPath = rf.path;
+            while (!parentPath.isEmpty()) {
+                int lastSep = parentPath.lastIndexOf(QLatin1Char('/'));
+                if (lastSep <= 0)
+                    break;
+                parentPath = parentPath.left(lastSep);
+                if (customNodes.contains(parentPath)) {
+                    parent = customNodes.value(parentPath);
+                    break;
+                }
+            }
+
+            node->parentNode = parent;
+            parent->children.append(node);
+            customNodes.insert(rf.path, node);
+            ++m_totalCount;
         }
     }
-
-    m_essentialCount = 0;
-    for (const auto &list : std::as_const(essentialsByAccount))
-        m_essentialCount += list.size();
 
     endResetModel();
     Q_EMIT countChanged();
@@ -339,53 +343,92 @@ void FolderModel::rebuildFlatList()
 void FolderModel::refreshForAccount(int accountId)
 {
     Q_UNUSED(accountId)
-    rebuildFlatList();
+    rebuildTree();
 }
 
-void FolderModel::toggleExpanded(int row)
+QModelIndex FolderModel::indexForPath(int accountId, const QString &path) const
 {
-    if (row < 0 || row >= m_folders.size()) return;
-    const auto &entry = m_folders.at(row);
+    // Walk the tree recursively to find the matching node.
+    std::function<QModelIndex(TreeNode *, int, const QModelIndex &)> search =
+        [&](TreeNode *node, int acid, const QModelIndex &parent) -> QModelIndex {
+        for (int i = 0; i < node->children.size(); ++i) {
+            auto *child = node->children.at(i);
+            if (child->entry.accountId == acid && child->entry.path == path)
+                return index(i, 0, parent);
+            QModelIndex childIdx = index(i, 0, parent);
+            QModelIndex found = search(child, acid, childIdx);
+            if (found.isValid())
+                return found;
+        }
+        return QModelIndex();
+    };
+    return search(m_root, accountId, QModelIndex());
+}
 
-    if (entry.isAccountHeader) {
-        if (m_accountsExpanded.contains(entry.accountId))
-            m_accountsExpanded.remove(entry.accountId);
-        else
-            m_accountsExpanded.insert(entry.accountId);
-    } else if (entry.hasChildren) {
-        if (m_expanded.contains(entry.path))
-            m_expanded.remove(entry.path);
-        else
-            m_expanded.insert(entry.path);
-    }
-    rebuildFlatList();
+// ── QAbstractItemModel interface ─────────────────────────────────────────────
+
+QModelIndex FolderModel::index(int row, int column, const QModelIndex &parent) const
+{
+    if (column != 0 || row < 0)
+        return QModelIndex();
+
+    TreeNode *parentNode = parent.isValid()
+        ? static_cast<TreeNode *>(parent.internalPointer())
+        : m_root;
+
+    if (!parentNode || row >= parentNode->children.size())
+        return QModelIndex();
+
+    return createIndex(row, 0, parentNode->children.at(row));
+}
+
+QModelIndex FolderModel::parent(const QModelIndex &index) const
+{
+    if (!index.isValid())
+        return QModelIndex();
+
+    auto *node = static_cast<TreeNode *>(index.internalPointer());
+    TreeNode *par = node->parentNode;
+
+    if (!par || par == m_root)
+        return QModelIndex(); // top-level: parent is invisible root
+
+    TreeNode *grandparent = par->parentNode;
+    int row = grandparent ? grandparent->children.indexOf(par) : 0;
+    return createIndex(row, 0, par);
 }
 
 int FolderModel::rowCount(const QModelIndex &parent) const
 {
-    if (parent.isValid()) return 0;
-    return m_folders.size();
+    TreeNode *node = parent.isValid()
+        ? static_cast<TreeNode *>(parent.internalPointer())
+        : m_root;
+    return node ? node->children.size() : 0;
+}
+
+int FolderModel::columnCount(const QModelIndex &parent) const
+{
+    Q_UNUSED(parent)
+    return 1;
 }
 
 QVariant FolderModel::data(const QModelIndex &index, int role) const
 {
-    if (!index.isValid() || index.row() >= m_folders.size())
+    if (!index.isValid())
         return {};
 
-    const auto &entry = m_folders.at(index.row());
+    auto *node = static_cast<TreeNode *>(index.internalPointer());
+    const auto &e = node->entry;
+
     switch (role) {
-    case AccountIdRole:        return entry.accountId;
-    case PathRole:             return entry.path;
-    case UnreadCountRole:      return entry.unreadCount;
-    case DepthRole:            return entry.depth;
-    case HasChildrenRole:      return entry.hasChildren;
-    case IsExpandedRole:       return entry.isAccountHeader ? entry.isExpanded : m_expanded.contains(entry.path);
-    case IsAccountHeaderRole:  return entry.isAccountHeader;
-    case EmailRole:            return entry.email;
-    case DisplayNameRole:      return entry.displayName;
-    case IconNameRole:         return entry.iconName;
-    case RoleRole:             return static_cast<int>(entry.role);
-    case IsEssentialRole:      return entry.isEssential;
+    case AccountIdRole:        return e.accountId;
+    case PathRole:             return e.path;
+    case UnreadCountRole:      return e.unreadCount;
+    case IsAccountHeaderRole:  return e.isAccountHeader;
+    case EmailRole:            return e.email;
+    case DisplayNameRole:      return e.displayName;
+    case IconNameRole:         return e.iconName;
+    case IsEssentialRole:      return e.isEssential;
     }
     return {};
 }
@@ -396,19 +439,15 @@ QHash<int, QByteArray> FolderModel::roleNames() const
         { AccountIdRole,       "accountId" },
         { PathRole,            "path" },
         { UnreadCountRole,     "unreadCount" },
-        { DepthRole,           "depth" },
-        { HasChildrenRole,     "hasChildren" },
-        { IsExpandedRole,      "isExpanded" },
         { IsAccountHeaderRole, "isAccountHeader" },
         { EmailRole,           "email" },
         { DisplayNameRole,     "displayName" },
         { IconNameRole,        "iconName" },
-        { RoleRole,            "folderRole" },
         { IsEssentialRole,     "isEssential" },
     };
 }
 
 int FolderModel::count() const
 {
-    return m_folders.size();
+    return m_totalCount;
 }

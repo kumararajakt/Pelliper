@@ -1,6 +1,6 @@
 #pragma once
 
-#include <QAbstractListModel>
+#include <QAbstractItemModel>
 #include <QFileSystemWatcher>
 #include <QSet>
 #include <QSqlDatabase>
@@ -20,22 +20,26 @@ enum class FolderRole {
 };
 
 struct FolderEntry {
-    int accountId;
+    int accountId = -1;
     QString path;
-    int unreadCount;
-    int depth;             // nesting level (0 = root)
-    bool hasChildren;      // whether this folder has sub-folders
-    bool noselect;         // virtual folder that can't hold messages
-    bool isAccountHeader;  // this is an account section header
-    bool isExpanded;       // for account headers and folders with children
-    QString email;         // account email (only for account headers)
-    QString displayName;   // last path component, prettified
-    QString iconName;      // KDE/Breeze icon name
-    FolderRole role;       // essential or custom
-    bool isEssential;      // true for Inbox/Starred/Sent/Drafts/Archive/Junk/Trash
+    int unreadCount = 0;
+    bool isAccountHeader = false;
+    QString email;
+    QString displayName;
+    QString iconName;
+    FolderRole role = FolderRole::Custom;
+    bool isEssential = false;
 };
 
-class FolderModel : public QAbstractListModel
+struct TreeNode {
+    FolderEntry entry;
+    TreeNode *parentNode = nullptr;
+    QList<TreeNode *> children;
+
+    ~TreeNode() { qDeleteAll(children); }
+};
+
+class FolderModel : public QAbstractItemModel
 {
     Q_OBJECT
     QML_ELEMENT
@@ -48,20 +52,22 @@ public:
         AccountIdRole = Qt::UserRole + 1,
         PathRole,
         UnreadCountRole,
-        DepthRole,
-        HasChildrenRole,
-        IsExpandedRole,
         IsAccountHeaderRole,
         EmailRole,
         DisplayNameRole,
         IconNameRole,
-        RoleRole,
         IsEssentialRole,
     };
 
     explicit FolderModel(QObject *parent = nullptr);
+    ~FolderModel() override;
 
+    // QAbstractItemModel interface
+    QModelIndex index(int row, int column,
+                      const QModelIndex &parent = QModelIndex()) const override;
+    QModelIndex parent(const QModelIndex &index) const override;
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
     QVariant data(const QModelIndex &index, int role) const override;
     QHash<int, QByteArray> roleNames() const override;
 
@@ -69,7 +75,9 @@ public:
 
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void refreshForAccount(int accountId);
-    Q_INVOKABLE void toggleExpanded(int row);
+
+    /// Find the QModelIndex for a given account+path, or invalid if not found.
+    Q_INVOKABLE QModelIndex indexForPath(int accountId, const QString &path) const;
 
 Q_SIGNALS:
     void countChanged();
@@ -77,9 +85,8 @@ Q_SIGNALS:
 private:
     Q_SLOT void onFileChanged(const QString &path);
 
-private:
     void startWatching();
-    void rebuildFlatList();
+    void rebuildTree();
     static QString cacheDbPath();
     static QString displayNameFromPath(const QString &path);
     static QString iconNameFromPath(const QString &path);
@@ -87,7 +94,6 @@ private:
     static int folderOrder(FolderRole role);
     static int depthFromPath(const QString &path);
 
-    // All folders from the DB (unfiltered)
     struct RawFolder {
         int accountId;
         QString path;
@@ -95,19 +101,10 @@ private:
         bool noselect;
     };
     QList<RawFolder> m_rawFolders;
-
-    // Account emails keyed by id
     QMap<int, QString> m_accountEmails;
 
-    // The flat list shown to QML
-    QList<FolderEntry> m_folders;
-
-    int m_essentialCount = 0;
-
-    // Expand/collapse state
-    QSet<QString> m_expanded;      // folder paths that are expanded
-    QSet<QString> m_hasChildren;   // folder paths that have sub-folders
-    QSet<int> m_accountsExpanded;  // account IDs whose sections are expanded
+    TreeNode *m_root = nullptr;
+    int m_totalCount = 0;
 
     QFileSystemWatcher m_watcher;
     QTimer m_refreshTimer;

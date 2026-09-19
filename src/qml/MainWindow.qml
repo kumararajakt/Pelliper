@@ -7,6 +7,8 @@ import org.kde.pelliper as Pelliper
 Kirigami.Page {
     id: mainPage
 
+    padding: 0
+
     property int selectedAccountId: -1
     property string selectedFolderPath: ""
     property int selectedUid: -1
@@ -145,7 +147,7 @@ Kirigami.Page {
         handle: Kirigami.Separator {}
 
         ColumnLayout {
-            Controls.SplitView.preferredWidth: Kirigami.Units.gridUnit * 12
+            Controls.SplitView.preferredWidth: Kirigami.Units.gridUnit * 15
             spacing: 0
 
             FolderSidebar {
@@ -181,26 +183,14 @@ Kirigami.Page {
                         if (sidebar.savedAccountId >= 0 && sidebar.savedFolderPath !== "") {
                             sidebar.restoreSelection();
                         } else {
-                            var roles = Pelliper.FolderModel.roleNames;
-                            var pathRole = 0, acidRole = 0;
-                            for (var key in roles) {
-                                if (roles[key] === "path")
-                                    pathRole = Number(key);
-                                if (roles[key] === "accountId")
-                                    acidRole = Number(key);
-                            }
-                            for (var i = 0; i < Pelliper.FolderModel.count; i++) {
-                                var idx = Pelliper.FolderModel.index(i, 0);
-                                var path = Pelliper.FolderModel.data(idx, pathRole);
-                                if (path === "INBOX") {
-                                    var acid = Pelliper.FolderModel.data(idx, acidRole);
-                                    sidebar.currentIndex = i;
-                                    sidebar.folderSelected(acid, path);
-                                    sidebar.saveSelection(acid, path);
-                                    Pelliper.ThreadModel.accountId = acid;
-                                    Pelliper.ThreadModel.folderPath = path;
-                                    break;
-                                }
+                            // Find the first INBOX across all accounts
+                            var acid = Pelliper.AccountModel.firstAccountId();
+                            var idx = Pelliper.FolderModel.indexForPath(acid, "INBOX");
+                            if (idx.isValid()) {
+                                sidebar.folderSelected(acid, "INBOX");
+                                sidebar.saveSelection(acid, "INBOX");
+                                Pelliper.ThreadModel.accountId = acid;
+                                Pelliper.ThreadModel.folderPath = "INBOX";
                             }
                         }
                     }
