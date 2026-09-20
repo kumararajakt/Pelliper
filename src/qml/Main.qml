@@ -49,11 +49,6 @@ Kirigami.ApplicationWindow {
     }
 
     Component {
-        id: settingsPageComponent
-        SettingsPage {}
-    }
-
-    Component {
         id: emptyStateComponent
         Kirigami.Page {
             title: "Pelliper"
@@ -65,7 +60,7 @@ Kirigami.ApplicationWindow {
                     text: "Add Account"
                     icon.name: "list-add-user"
                     Layout.alignment: Qt.AlignHCenter
-                    onClicked: root.pageStack.layers.push(addAccountComponent)
+                    onClicked: addAccountDialog.open()
                 }
             }
         }
@@ -76,9 +71,26 @@ Kirigami.ApplicationWindow {
         MainWindow {}
     }
 
-    Component {
-        id: addAccountComponent
-        AddAccountPage {}
+    AddAccountDialog {
+        id: addAccountDialog
+    }
+
+    SettingsDialog {
+        id: settingsDialog
+        onAddAccountRequested: addAccountDialog.open()
+        onEmptyStateRequested: {
+            settingsDialog.close()
+            root.pageStack.clear()
+            root.pageStack.push(emptyStateComponent)
+        }
+    }
+
+    function openSettingsDialog() {
+        settingsDialog.open()
+    }
+
+    function openAddAccountDialog() {
+        addAccountDialog.open()
     }
 
     Component.onCompleted: {

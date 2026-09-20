@@ -27,42 +27,6 @@ Kirigami.Page {
     }
 
     Component {
-        id: settingsPageComponent
-        SettingsPage {
-            onAddAccountRequested: {
-                applicationWindow().pageStack.pop()
-                applicationWindow().pageStack.layers.push(addAccountPageComponent)
-            }
-            onEmptyStateRequested: {
-                applicationWindow().pageStack.clear()
-                applicationWindow().pageStack.layers.push(emptyStateComponent)
-            }
-        }
-    }
-
-    Component {
-        id: addAccountPageComponent
-        AddAccountPage {}
-    }
-
-    Component {
-        id: emptyStateComponent
-        Kirigami.Page {
-            title: "Pelliper"
-            ColumnLayout {
-                anchors.centerIn: parent
-                spacing: Kirigami.Units.largeSpacing
-                Controls.Button {
-                    text: "Add Account"
-                    icon.name: "list-add-user"
-                    Layout.alignment: Qt.AlignHCenter
-                    onClicked: applicationWindow().pageStack.layers.push(addAccountPageComponent)
-                }
-            }
-        }
-    }
-
-    Component {
         id: composePageComponent
         ComposePage {}
     }
@@ -126,6 +90,7 @@ Kirigami.Page {
                 applicationWindow().pageStack.layers.push(page)
             }
         },
+
         Kirigami.Action {
             text: qsTr("Search")
             icon.name: "system-search"
@@ -134,10 +99,11 @@ Kirigami.Page {
                 applicationWindow().pageStack.layers.push(searchPageComponent)
             }
         },
+
         Kirigami.Action {
             text: qsTr("Settings")
             icon.name: "configure"
-            onTriggered: applicationWindow().pageStack.layers.push(settingsPageComponent)
+            onTriggered: applicationWindow().openSettingsDialog()
         }
     ]
 

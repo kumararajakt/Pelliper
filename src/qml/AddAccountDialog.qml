@@ -4,12 +4,33 @@ import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
 import app.pelliper as Pelliper
 
-Kirigami.Page {
+Kirigami.Dialog {
     id: root
     title: "Add Account"
+    parent: Controls.Overlay.overlay
+    modal: true
+    anchors.centerIn: parent
+    standardButtons: Controls.Dialog.Cancel
+    onRejected: root.close()
+    closePolicy: Controls.Dialog.NoAutoClose
+    width: 520
+    height: 560
 
     property int currentPage: 0
     property string errorMessage: ""
+
+    onOpened: {
+        root.currentPage = 0;
+        root.errorMessage = "";
+        displayNameField.text = "";
+        emailField.text = "";
+        imapHostField.text = "";
+        imapPortField.text = "";
+        imapSecurityField.text = "";
+        smtpHostField.text = "";
+        smtpPortField.text = "";
+        smtpSecurityField.text = "";
+    }
 
     function isValidEmail(email) {
         var re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -54,16 +75,15 @@ Kirigami.Page {
         target: Pelliper.DaemonClient
         function onAccountAdded(email) {
             root.errorMessage = "";
-            applicationWindow().pageStack.layers.pop();
+            root.close();
         }
         function onAccountFailed(email, error) {
             root.errorMessage = error;
         }
     }
 
-    ColumnLayout {
-        anchors.fill: parent
-        anchors.margins: Kirigami.Units.largeSpacing
+    contentItem: ColumnLayout {
+        spacing: Kirigami.Units.largeSpacing
 
         RowLayout {
             Layout.alignment: Qt.AlignHCenter
