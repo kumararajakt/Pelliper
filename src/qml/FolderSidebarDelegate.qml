@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
-import app.pelliper as Pelliper
 
 Controls.ItemDelegate {
     id: item
@@ -51,16 +50,13 @@ Controls.ItemDelegate {
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    var key = item.isAccountHeader ? "account:" + item.accountId : (item.path.length > 0 ? item.path : item.displayName)
-                    if (item.expanded) {
-                        treeView.collapse(item.row)
-                        Pelliper.FolderModel.setPathExpanded(key, false)
-                    } else {
-                        treeView.expand(item.row)
-                        Pelliper.FolderModel.setPathExpanded(key, true)
+                    onClicked: {
+                        if (item.expanded) {
+                            item.treeView.collapse(item.row);
+                        } else {
+                            item.treeView.expand(item.row);
+                        }
                     }
-                }
                 }
             }
         }
@@ -106,21 +102,16 @@ Controls.ItemDelegate {
 
     onClicked: {
         if (item.hasChildren) {
-            var key = item.isAccountHeader ? "account:" + item.accountId : (item.path.length > 0 ? item.path : item.displayName)
             if (item.expanded) {
-                treeView.collapse(item.row)
-                Pelliper.FolderModel.setPathExpanded(key, false)
+                treeView.collapse(item.row);
             } else {
-                treeView.expand(item.row)
-                Pelliper.FolderModel.setPathExpanded(key, true)
+                treeView.expand(item.row);
             }
         }
         if (!item.isAccountHeader) {
-            // For aggregated parent nodes (accountId=-1, empty path),
-            // use displayName as the folder path so MessageModel can handle it
-            var folderPath = item.path.length > 0 ? item.path : item.displayName
-            item.folderSelected(item.accountId, folderPath)
-            item.saveSelection(item.accountId, folderPath)
+            var folderPath = item.path.length > 0 ? item.path : item.displayName;
+            item.folderSelected(item.accountId, folderPath);
+            item.saveSelection(item.accountId, folderPath);
         }
     }
 }

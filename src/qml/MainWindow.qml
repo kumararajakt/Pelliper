@@ -143,6 +143,9 @@ Kirigami.Page {
                 Component.onCompleted: {
                     // Sync menu bar with saved folder mode
                     appMenuBar.folderMode = sidebar.unifiedMode ? 1 : 0
+                    // Apply the saved mode to the tree model so the sidebar
+                    // rebuilds unified (or per-account) before selecting.
+                    Pelliper.FolderModel.unifiedMode = sidebar.unifiedMode
 
                     if (Pelliper.FolderModel.count > 0) {
                         if (sidebar.unifiedMode) {
