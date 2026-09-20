@@ -48,6 +48,7 @@ class FolderModel : public QAbstractItemModel
     QML_SINGLETON
 
     Q_PROPERTY(int count READ count NOTIFY countChanged)
+    Q_PROPERTY(bool unifiedMode READ unifiedMode WRITE setUnifiedMode NOTIFY unifiedModeChanged)
 
 public:
     enum Roles {
@@ -59,6 +60,7 @@ public:
         DisplayNameRole,
         IconNameRole,
         IsEssentialRole,
+        FolderRoleRole,
     };
 
     explicit FolderModel(QObject *parent = nullptr);
@@ -74,6 +76,8 @@ public:
     QHash<int, QByteArray> roleNames() const override;
 
     int count() const;
+    bool unifiedMode() const { return m_unifiedMode; }
+    void setUnifiedMode(bool enabled);
 
     Q_INVOKABLE void refresh();
 
@@ -85,6 +89,7 @@ public:
 
 Q_SIGNALS:
     void countChanged();
+    void unifiedModeChanged();
     /// Emitted after a rebuild so QML can re-expand previously open rows.
     void needsExpansion(const QStringList &paths);
 
@@ -93,8 +98,10 @@ private:
 
     void startWatching();
     void rebuildTree();
+    void rebuildUnifiedTree();
     static QString cacheDbPath();
     static QString displayNameFromPath(const QString &path);
+    static QString displayNameFromRole(FolderRole role);
     static QString iconNameFromRole(FolderRole role);
     /// Resolve a folder's role from the persisted SPECIAL-USE kind string
     /// ("inbox", "sent", "trash", ...), falling back to path-name heuristics
@@ -116,6 +123,7 @@ private:
 
     TreeNode *m_root = nullptr;
     int m_totalCount = 0;
+    bool m_unifiedMode = false;
     QSet<QString> m_expandedPaths;
     QList<RawFolder> m_prevRawFolders;
 

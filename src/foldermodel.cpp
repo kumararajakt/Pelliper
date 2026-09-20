@@ -184,6 +184,21 @@ QString FolderModel::iconNameFromRole(FolderRole role)
     return QStringLiteral("folder-mail");
 }
 
+QString FolderModel::displayNameFromRole(FolderRole role)
+{
+    switch (role) {
+    case FolderRole::Inbox:    return QStringLiteral("Inbox");
+    case FolderRole::Starred:  return QStringLiteral("Starred");
+    case FolderRole::Sent:     return QStringLiteral("Sent");
+    case FolderRole::Drafts:   return QStringLiteral("Drafts");
+    case FolderRole::Archive:  return QStringLiteral("Archive");
+    case FolderRole::Junk:     return QStringLiteral("Spam");
+    case FolderRole::Trash:    return QStringLiteral("Trash");
+    case FolderRole::Custom:   return QStringLiteral("Custom");
+    }
+    return QStringLiteral("Custom");
+}
+
 void FolderModel::refresh()
 {
     QList<RawFolder> newRawFolders;
@@ -268,6 +283,11 @@ void FolderModel::refresh()
         // Structural change: full rebuild
         m_prevRawFolders = newRawFolders;
         rebuildTree();
+    } else if (m_unifiedMode) {
+        // In unified mode, unread count changes require a full rebuild
+        // because we aggregate across accounts
+        m_prevRawFolders = newRawFolders;
+        rebuildTree();
     } else {
         // Only data changed (unread counts): update in place
         bool anyChanged = false;
@@ -295,6 +315,16 @@ void FolderModel::rebuildTree()
     delete m_root;
     m_root = new TreeNode;
     m_totalCount = 0;
+
+    if (m_unifiedMode) {
+        rebuildUnifiedTree();
+        endResetModel();
+        Q_EMIT countChanged();
+        if (!m_expandedPaths.isEmpty()) {
+            Q_EMIT needsExpansion(m_expandedPaths.values());
+        }
+        return;
+    }
 
     // Group raw folders by account, preserving order of first appearance
     QList<int> accountIds;
@@ -444,12 +474,205 @@ void FolderModel::rebuildTree()
     }
 }
 
+void FolderModel::rebuildUnifiedTree()
+{
+    // In unified mode:    // Unified mode tree structure:
+    // Inbox (aggregated)
+    //   ├── user1@example.com  (that account's Inbox)
+    //   └── user2@example.com  (that account's Inbox)
+    // Sent (aggregated)
+    //   ├── user1@example.com
+    //   └── user2@example.com
+    // Projects (per-account custom)
+    //   └── Active
+
+    // ── Step 1: Collect per-account essential folders ──
+    // roleByAccount[role][acid] = path for that account's folder
+    QMap<FolderRole, QMap<int, QString>> roleByAccount;
+    QMap<FolderRole, int> unreadByRole;
+
+    // Collect custom folders grouped by account
+    QList<int> accountIds;
+    QSet<int> seenAccts;
+    QMap<int, QList<RawFolder>> customsByAccount;
+
+    for (const auto &rf : std::as_const(m_rawFolders)) {
+        if (rf.noselect)
+            continue;
+        FolderRole role = roleFromKind(rf.kind, rf.path);
+
+        if (role == FolderRole::Custom) {
+            customsByAccount[rf.accountId].append(rf);
+            if (!seenAccts.contains(rf.accountId)) {
+                seenAccts.insert(rf.accountId);
+                accountIds.append(rf.accountId);
+            }
+            continue;
+        }
+
+        // Gmail demotion: skip root-level essentials if [Gmail]/ equivalent exists
+        if (!rf.path.startsWith(QStringLiteral("[Gmail]/"))) {
+            bool hasGmailEquivalent = false;
+            for (const auto &other : std::as_const(m_rawFolders)) {
+                if (other.accountId == rf.accountId && other.path.startsWith(QStringLiteral("[Gmail]/"))) {
+                    FolderRole otherRole = roleFromKind(other.kind, other.path);
+                    if (otherRole == role) {
+                        hasGmailEquivalent = true;
+                        break;
+                    }
+                }
+            }
+            if (hasGmailEquivalent)
+                continue;
+        }
+
+        roleByAccount[role].insert(rf.accountId, rf.path);
+        unreadByRole[role] += rf.unreadCount;
+
+        if (!seenAccts.contains(rf.accountId)) {
+            seenAccts.insert(rf.accountId);
+            accountIds.append(rf.accountId);
+        }
+    }
+
+    // ── Step 2: Aggregated essential folders as top-level nodes ──
+    // Each has account email children showing that account's specific folder
+    QList<FolderRole> roles = unreadByRole.keys();
+    std::sort(roles.begin(), roles.end(),
+              [](const FolderRole &a, const FolderRole &b) {
+                  return folderOrder(a) < folderOrder(b);
+              });
+
+    for (const FolderRole role : std::as_const(roles)) {
+        auto *roleNode = new TreeNode;
+        roleNode->entry.accountId = -1;
+        roleNode->entry.path = QString();
+        roleNode->entry.unreadCount = unreadByRole.value(role);
+        roleNode->entry.role = role;
+        roleNode->entry.isAccountHeader = false;
+        roleNode->entry.isEssential = true;
+        roleNode->entry.displayName = displayNameFromRole(role);
+        roleNode->entry.iconName = iconNameFromRole(role);
+        roleNode->entry.email = QString();
+        roleNode->entry.kind = QString();
+        roleNode->parentNode = m_root;
+        m_root->children.append(roleNode);
+        ++m_totalCount;
+
+        // Add account email children for this role
+        const auto &accounts = roleByAccount.value(role);
+        for (auto it = accounts.constBegin(); it != accounts.constEnd(); ++it) {
+            int acid = it.key();
+            const QString &path = it.value();
+
+            // Count unread for this specific account
+            int acctUnread = 0;
+            for (const auto &rf : std::as_const(m_rawFolders)) {
+                if (rf.accountId == acid && rf.path == path) {
+                    acctUnread = rf.unreadCount;
+                    break;
+                }
+            }
+
+            auto *acctNode = new TreeNode;
+            acctNode->entry.accountId = acid;
+            acctNode->entry.path = path;
+            acctNode->entry.unreadCount = acctUnread;
+            acctNode->entry.role = role;
+            acctNode->entry.isAccountHeader = false;
+            acctNode->entry.isEssential = false;
+            acctNode->entry.displayName = m_accountEmails.value(acid);
+            acctNode->entry.iconName = QStringLiteral("user");
+            acctNode->entry.email = m_accountEmails.value(acid);
+            acctNode->entry.kind = QString();
+            acctNode->parentNode = roleNode;
+            roleNode->children.append(acctNode);
+            ++m_totalCount;
+        }
+    }
+
+    // ── Step 3: Per-account custom folders with email headers ──
+    for (int acid : std::as_const(accountIds)) {
+        const auto &customs = customsByAccount.value(acid);
+        if (customs.isEmpty())
+            continue;
+
+        // Account email header
+        auto *acctNode = new TreeNode;
+        acctNode->entry.accountId = acid;
+        acctNode->entry.isAccountHeader = true;
+        acctNode->entry.email = m_accountEmails.value(acid);
+        acctNode->entry.displayName = m_accountEmails.value(acid);
+        acctNode->entry.iconName = QStringLiteral("user");
+        acctNode->entry.isEssential = false;
+        acctNode->parentNode = m_root;
+        m_root->children.append(acctNode);
+        ++m_totalCount;
+
+        // Build custom folder tree for this account
+        QMap<QString, TreeNode *> allNodes;
+
+        QList<RawFolder> sortedCustoms = customs;
+        std::sort(sortedCustoms.begin(), sortedCustoms.end(),
+                  [](const RawFolder &a, const RawFolder &b) {
+                      if (b.path.startsWith(a.path + QLatin1Char('/')))
+                          return true;
+                      if (a.path.startsWith(b.path + QLatin1Char('/')))
+                          return false;
+                      return a.path.toLower() < b.path.toLower();
+                  });
+
+        for (const auto &rf : std::as_const(sortedCustoms)) {
+            FolderEntry entry;
+            entry.accountId = acid;
+            entry.path = rf.path;
+            entry.unreadCount = rf.unreadCount;
+            entry.role = roleFromKind(rf.kind, rf.path);
+            entry.isEssential = false;
+            entry.displayName = displayNameFromPath(rf.path);
+            entry.iconName = iconNameFromRole(entry.role);
+            entry.kind = rf.kind;
+
+            auto *node = new TreeNode;
+            node->entry = entry;
+
+            // Find parent: longest prefix path already in allNodes
+            TreeNode *parent = acctNode;
+            QString parentPath = rf.path;
+            while (!parentPath.isEmpty()) {
+                int lastSep = parentPath.lastIndexOf(QLatin1Char('/'));
+                if (lastSep <= 0)
+                    break;
+                parentPath = parentPath.left(lastSep);
+                if (allNodes.contains(parentPath)) {
+                    parent = allNodes.value(parentPath);
+                    break;
+                }
+            }
+
+            node->parentNode = parent;
+            parent->children.append(node);
+            allNodes.insert(rf.path, node);
+            ++m_totalCount;
+        }
+    }
+}
+
 void FolderModel::setPathExpanded(const QString &path, bool expanded)
 {
     if (expanded)
         m_expandedPaths.insert(path);
     else
         m_expandedPaths.remove(path);
+}
+
+void FolderModel::setUnifiedMode(bool enabled)
+{
+    if (m_unifiedMode == enabled)
+        return;
+    m_unifiedMode = enabled;
+    Q_EMIT unifiedModeChanged();
+    rebuildTree();
 }
 
 QModelIndex FolderModel::indexForPath(int accountId, const QString &path) const
@@ -535,6 +758,7 @@ QVariant FolderModel::data(const QModelIndex &index, int role) const
     case DisplayNameRole:      return e.displayName;
     case IconNameRole:         return e.iconName;
     case IsEssentialRole:      return e.isEssential;
+    case FolderRoleRole:       return static_cast<int>(e.role);
     }
     return {};
 }
@@ -550,6 +774,7 @@ QHash<int, QByteArray> FolderModel::roleNames() const
         { DisplayNameRole,     "displayName" },
         { IconNameRole,        "iconName" },
         { IsEssentialRole,     "isEssential" },
+        { FolderRoleRole,      "folderRole" },
     };
 }
 

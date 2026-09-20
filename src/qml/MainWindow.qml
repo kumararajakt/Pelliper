@@ -15,6 +15,7 @@ Kirigami.Page {
 
     function setFolderMode(mode) {
         sidebar.unifiedMode = (mode === 1)
+        Pelliper.FolderModel.unifiedMode = sidebar.unifiedMode
         if (sidebar.unifiedMode) {
             sidebar.folderSelected(-1, "INBOX")
         } else {

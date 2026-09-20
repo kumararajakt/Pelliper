@@ -43,13 +43,10 @@ Controls.ScrollView {
         anchors.fill: parent
         model: Pelliper.FolderModel
 
-        // Let the tree view fill available width
         clip: true
 
-        // Selection
         selectionBehavior: Controls.SelectionView.SelectCurrentRow
 
-        // Delegate for each tree row
         delegate: FolderSidebarDelegate {
             onFolderSelected: function (accountId, folderPath) {
                 sidebarRoot.folderSelected(accountId, folderPath)
@@ -71,6 +68,10 @@ Controls.ScrollView {
                     if (roles[key] === "accountId") acidRole = Number(key)
                     if (roles[key] === "isAccountHeader") headerRole = Number(key)
                 }
+                var displayNameRole = 0
+                for (var key2 in roles) {
+                    if (roles[key2] === "displayName") displayNameRole = Number(key2)
+                }
                 for (var i = 0; i < treeView.rows; i++) {
                     var idx = Pelliper.FolderModel.index(i, 0)
                     var isHeader = Pelliper.FolderModel.data(idx, headerRole)
@@ -78,7 +79,8 @@ Controls.ScrollView {
                     if (isHeader) {
                         expandKey = "account:" + Pelliper.FolderModel.data(idx, acidRole)
                     } else {
-                        expandKey = Pelliper.FolderModel.data(idx, pathRole)
+                        var p = Pelliper.FolderModel.data(idx, pathRole)
+                        expandKey = p.length > 0 ? p : Pelliper.FolderModel.data(idx, displayNameRole)
                     }
                     if (paths.indexOf(expandKey) >= 0)
                         treeView.expand(i)
@@ -88,9 +90,10 @@ Controls.ScrollView {
     }
 
     Component.onCompleted: {
+        Pelliper.FolderModel.unifiedMode = unifiedMode
+
         if (Pelliper.FolderModel.count > 0) {
             treeView.expand(0)
-            // Track the first account as expanded
             var roles = Pelliper.FolderModel.roleNames
             var acidRole = 0
             for (var key in roles) {

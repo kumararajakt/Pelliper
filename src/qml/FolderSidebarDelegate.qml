@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import app.pelliper as Pelliper
 
 Controls.ItemDelegate {
     id: item
@@ -51,7 +52,7 @@ Controls.ItemDelegate {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                 onClicked: {
-                    var key = item.isAccountHeader ? "account:" + item.accountId : item.path
+                    var key = item.isAccountHeader ? "account:" + item.accountId : (item.path.length > 0 ? item.path : item.displayName)
                     if (item.expanded) {
                         treeView.collapse(item.row)
                         Pelliper.FolderModel.setPathExpanded(key, false)
@@ -66,7 +67,7 @@ Controls.ItemDelegate {
 
         // Folder icon (always at the same column, straight line)
         Kirigami.Icon {
-            source: item.isAccountHeader ? "user" : item.iconName
+            source: item.iconName.length > 0 ? item.iconName : (item.isAccountHeader ? "user" : "folder-mail")
             Layout.preferredWidth: 16
             Layout.preferredHeight: 16
         }
@@ -78,7 +79,7 @@ Controls.ItemDelegate {
 
         // Email label (account header)
         Controls.Label {
-            text: item.email
+            text: item.email.length > 0 ? item.email : item.displayName
             font.weight: Font.Bold
             elide: Text.ElideRight
             Layout.fillWidth: true
@@ -105,7 +106,7 @@ Controls.ItemDelegate {
 
     onClicked: {
         if (item.hasChildren) {
-            var key = item.isAccountHeader ? "account:" + item.accountId : item.path
+            var key = item.isAccountHeader ? "account:" + item.accountId : (item.path.length > 0 ? item.path : item.displayName)
             if (item.expanded) {
                 treeView.collapse(item.row)
                 Pelliper.FolderModel.setPathExpanded(key, false)
@@ -115,8 +116,11 @@ Controls.ItemDelegate {
             }
         }
         if (!item.isAccountHeader) {
-            item.folderSelected(item.accountId, item.path)
-            item.saveSelection(item.accountId, item.path)
+            // For aggregated parent nodes (accountId=-1, empty path),
+            // use displayName as the folder path so MessageModel can handle it
+            var folderPath = item.path.length > 0 ? item.path : item.displayName
+            item.folderSelected(item.accountId, folderPath)
+            item.saveSelection(item.accountId, folderPath)
         }
     }
 }
