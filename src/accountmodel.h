@@ -41,9 +41,6 @@ public:
     /// Reload accounts from the read-only cache database.
     Q_INVOKABLE void refresh();
 
-    /// Return the first account's email, or empty string if none.
-    Q_INVOKABLE QString firstAccountEmail() const;
-
     /// Return the first account's id, or -1 if none.
     Q_INVOKABLE int firstAccountId() const;
 

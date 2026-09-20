@@ -139,7 +139,6 @@ void OAuth2::startAuth()
     params.addQueryItem(QStringLiteral("access_type"), QStringLiteral("offline"));
     authUrl.setQuery(params);
 
-    setAuthUrl(authUrl.toString());
     setStatus(tr("Opening browser for authentication..."));
     setAuthenticating(true);
 
@@ -154,7 +153,6 @@ void OAuth2::cancel()
     stopCallbackServer();
     setAuthenticating(false);
     setStatus(tr("Authentication cancelled."));
-    setAuthUrl(QString());
     Q_EMIT failed(tr("Authentication was cancelled or timed out."));
 }
 
@@ -380,11 +378,4 @@ void OAuth2::setStatus(const QString &value)
     if (m_status == value) return;
     m_status = value;
     Q_EMIT statusChanged();
-}
-
-void OAuth2::setAuthUrl(const QString &value)
-{
-    if (m_authUrl == value) return;
-    m_authUrl = value;
-    Q_EMIT authUrlChanged();
 }

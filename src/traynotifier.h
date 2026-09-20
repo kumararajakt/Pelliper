@@ -22,18 +22,13 @@ class TrayNotifier : public QObject
     QML_ELEMENT
     QML_SINGLETON
 
-    Q_PROPERTY(int unreadCount READ unreadCount NOTIFY unreadCountChanged)
-
-public:
+    public:
     explicit TrayNotifier(QObject *parent = nullptr);
-
-    int unreadCount() const { return m_unread; }
 
 Q_SIGNALS:
     void openMessage(int accountId, const QString &folderPath, quint64 uid,
                      const QString &subject, const QString &sender, qint64 date);
     void showWindow();
-    void unreadCountChanged();
 
 private:
     struct NewMessage {

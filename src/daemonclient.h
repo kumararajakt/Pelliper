@@ -32,18 +32,12 @@ public:
         const QString &refreshToken = QString()
     );
 
-    Q_INVOKABLE void getFolders(qint64 accountId);
-    Q_INVOKABLE void getMessages(qint64 accountId, const QString &folderPath, qint64 offset, qint64 limit);
-    Q_INVOKABLE void countMessages(qint64 accountId, const QString &folderPath);
     Q_INVOKABLE void syncAll();
     Q_INVOKABLE void setIdleFolder(qint64 accountId, const QString &folderPath);
     Q_INVOKABLE void setMessageRead(qint64 accountId, const QString &folderPath, qint64 uid, bool read);
     Q_INVOKABLE void setMessageStarred(qint64 accountId, const QString &folderPath, qint64 uid, bool starred);
     Q_INVOKABLE void moveMessage(qint64 accountId, const QString &folderPath, qint64 uid, const QString &destFolder);
     Q_INVOKABLE void deleteMessage(qint64 accountId, const QString &folderPath, qint64 uid);
-    Q_INVOKABLE void createFolder(qint64 accountId, const QString &name);
-    Q_INVOKABLE void renameFolder(qint64 accountId, const QString &oldName, const QString &newName);
-    Q_INVOKABLE void deleteFolder(qint64 accountId, const QString &name);
     Q_INVOKABLE void searchAddresses(const QString &query);
     Q_INVOKABLE bool isKnownAddress(const QString &email);
     Q_INVOKABLE void blockSender(const QString &email);
@@ -70,10 +64,6 @@ Q_SIGNALS:
     void busyChanged();
     void accountAdded(const QString &email);
     void accountFailed(const QString &email, const QString &error);
-    void foldersLoaded(const QString &json);
-    void messagesLoaded(const QString &json);
-    void messageCountLoaded(qint64 count);
-    void syncAllFinished(bool success);
     void bodyLoaded(qint64 uid, const QString &html);
     void attachmentsLoaded(qint64 uid, const QString &json);
     void accountRemoved(qint64 accountId);
@@ -83,7 +73,6 @@ Q_SIGNALS:
 
 private Q_SLOTS:
     void onAddAccountReply(QDBusPendingCallWatcher *watcher);
-    void onGenericReply(QDBusPendingCallWatcher *watcher, const QString &signal);
 
 private:
     void setAvailable(bool value);

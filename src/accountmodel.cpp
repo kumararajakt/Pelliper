@@ -103,11 +103,6 @@ int AccountModel::count() const
     return m_accounts.size();
 }
 
-QString AccountModel::firstAccountEmail() const
-{
-    return m_accounts.isEmpty() ? QString() : m_accounts.first().email;
-}
-
 int AccountModel::firstAccountId() const
 {
     return m_accounts.isEmpty() ? -1 : m_accounts.first().id;

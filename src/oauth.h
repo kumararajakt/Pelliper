@@ -30,7 +30,6 @@ class OAuth2 : public QObject
 
     Q_PROPERTY(bool authenticating READ authenticating NOTIFY authenticatingChanged)
     Q_PROPERTY(QString status READ status NOTIFY statusChanged)
-    Q_PROPERTY(QString authUrl READ authUrl NOTIFY authUrlChanged)
     Q_PROPERTY(bool hasProvider READ hasProvider NOTIFY providerChanged)
 
 public:
@@ -38,7 +37,6 @@ public:
 
     bool authenticating() const { return m_authenticating; }
     QString status() const { return m_status; }
-    QString authUrl() const { return m_authUrl; }
     bool hasProvider() const { return !m_provider.id.isEmpty(); }
 
     Q_INVOKABLE void detectProvider(const QString &email);
@@ -50,7 +48,6 @@ public:
 Q_SIGNALS:
     void authenticatingChanged();
     void statusChanged();
-    void authUrlChanged();
     void providerChanged();
     void authenticated(const QString &accessToken, const QString &refreshToken,
                        const QString &email, const QString &displayName);
@@ -63,7 +60,6 @@ private Q_SLOTS:
 private:
     void setAuthenticating(bool value);
     void setStatus(const QString &value);
-    void setAuthUrl(const QString &value);
     void exchangeCode(const QString &code);
     QString generateState();
     quint16 startCallbackServer();
@@ -76,7 +72,6 @@ private:
 
     bool m_authenticating = false;
     QString m_status;
-    QString m_authUrl;
     QString m_email;
     QString m_displayName;
     OAuthProvider m_provider;

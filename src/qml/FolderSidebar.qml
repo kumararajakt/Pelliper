@@ -13,10 +13,6 @@ Controls.ScrollView {
     property bool unifiedMode: false
 
     signal folderSelected(int accountId, string folderPath)
-    signal composeRequested()
-
-    // Expose count for callers that check folderList.count
-    readonly property int count: treeView.rows
 
     Settings {
         id: settings

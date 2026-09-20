@@ -444,12 +444,6 @@ void FolderModel::rebuildTree()
     }
 }
 
-void FolderModel::refreshForAccount(int accountId)
-{
-    Q_UNUSED(accountId)
-    rebuildTree();
-}
-
 void FolderModel::setPathExpanded(const QString &path, bool expanded)
 {
     if (expanded)

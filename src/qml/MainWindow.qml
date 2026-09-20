@@ -173,11 +173,6 @@ Kirigami.Page {
                     }
                 }
 
-                onComposeRequested: {
-                    var accountId = Pelliper.AccountModel.count > 0 ? Pelliper.AccountModel.firstAccountId() : -1
-                    root.openCompose(accountId, "", "", "")
-                }
-
                 Component.onCompleted: {
                     if (Pelliper.FolderModel.count > 0) {
                         if (sidebar.savedAccountId >= 0 && sidebar.savedFolderPath !== "") {

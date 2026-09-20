@@ -76,7 +76,6 @@ public:
     int count() const;
 
     Q_INVOKABLE void refresh();
-    Q_INVOKABLE void refreshForAccount(int accountId);
 
     /// Find the QModelIndex for a given account+path, or invalid if not found.
     Q_INVOKABLE QModelIndex indexForPath(int accountId, const QString &path) const;

@@ -105,7 +105,6 @@ void TrayNotifier::refresh()
                 const int unread = q.value(0).toInt();
                 if (unread != m_unread) {
                     m_unread = unread;
-                    Q_EMIT unreadCountChanged();
                 }
             }
         } else {

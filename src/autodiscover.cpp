@@ -20,13 +20,11 @@ void Autodiscover::discover(const QString &email)
 
     const int atIdx = email.indexOf(QLatin1Char('@'));
     if (atIdx < 0 || atIdx == email.length() - 1) {
-        setStatus(tr("Invalid email address"));
         return;
     }
 
     m_domain = email.mid(atIdx + 1).toLower().trimmed();
     if (m_domain.isEmpty()) {
-        setStatus(tr("Invalid email address"));
         return;
     }
 
@@ -37,7 +35,6 @@ void Autodiscover::discover(const QString &email)
     };
     m_urlIndex = 0;
 
-    setStatus(tr("Looking up server settings for %1...").arg(m_domain));
     setDiscovering(true);
 
     tryNextUrl();
@@ -47,8 +44,7 @@ void Autodiscover::tryNextUrl()
 {
     if (m_urlIndex >= m_urls.size()) {
         setDiscovering(false);
-        setStatus(tr("Could not auto-detect server settings. Enter them manually."));
-        Q_EMIT failed(m_status);
+        Q_EMIT failed(tr("Could not auto-detect server settings. Enter them manually."));
         return;
     }
 
@@ -162,7 +158,6 @@ bool Autodiscover::parseConfig(const QByteArray &data)
     if (imapPort == 0) imapPort = 993;
     if (smtpPort == 0) smtpPort = 587;
 
-    setStatus(tr("Server settings detected. You can review them on the next page."));
     Q_EMIT discovered(imapHost, imapPort, imapSecurity, smtpHost, smtpPort, smtpSecurity);
     return true;
 }
@@ -172,11 +167,4 @@ void Autodiscover::setDiscovering(bool value)
     if (m_discovering == value) return;
     m_discovering = value;
     Q_EMIT discoveringChanged();
-}
-
-void Autodiscover::setStatus(const QString &value)
-{
-    if (m_status == value) return;
-    m_status = value;
-    Q_EMIT statusChanged();
 }

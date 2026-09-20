@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
-import QtQuick.Dialogs
 import QtWebEngine
 import org.kde.kirigami as Kirigami
 import app.pelliper as Pelliper
@@ -24,7 +23,6 @@ Kirigami.Page {
     property bool isRead: false
     property bool isStarred: false
     property var attachments: []
-    property string saveFileSrc: ""
     property bool hasRemoteContent: false
     property bool senderIsKnown: false
     property string hoveredLink: ""
@@ -70,84 +68,10 @@ Kirigami.Page {
         visible: currentUid >= 0 && bodyHtml === ""
     }
 
-    footer: Controls.ToolBar {
-        id: attachmentFooter
-        visible: messageView.attachments.length > 0
+    footer: MessageAttachmentBar {
+        id: attachmentBar
+        attachments: messageView.attachments
         width: messageView.width
-
-        contentItem: ListView {
-            id: attachmentList
-            orientation: Qt.Horizontal
-            spacing: Kirigami.Units.smallSpacing
-            clip: true
-            leftMargin: Kirigami.Units.smallSpacing
-            rightMargin: Kirigami.Units.smallSpacing
-            model: messageView.attachments
-
-            delegate: Controls.Button {
-                id: attachmentButton
-                width: Math.max(implicitWidth, Kirigami.Units.gridUnit * 8)
-                height: attachmentList.height
-
-                contentItem: RowLayout {
-                    spacing: Kirigami.Units.smallSpacing
-
-                    Kirigami.Icon {
-                        source: messageView.attachmentIcon(modelData.content_type)
-                        Layout.preferredWidth: Kirigami.Units.iconSizeSmallMedium
-                        Layout.preferredHeight: Kirigami.Units.iconSizeSmallMedium
-                    }
-
-                    Controls.Label {
-                        text: modelData.name || qsTr("(unnamed)")
-                        elide: Text.ElideRight
-                        Layout.fillWidth: true
-                        Layout.maximumWidth: Kirigami.Units.gridUnit * 10
-                    }
-
-                    Kirigami.Icon {
-                        source: "pan-down-symbolic"
-                        Layout.preferredWidth: Kirigami.Units.iconSizeSmall
-                        Layout.preferredHeight: Kirigami.Units.iconSizeSmall
-                    }
-                }
-
-                Controls.ToolTip.text: modelData.name + " (" + messageView.formatFileSize(modelData.size) + ")"
-                Controls.ToolTip.visible: hovered
-
-                onClicked: attachmentFooter.openMenu(index, attachmentButton)
-            }
-        }
-    }
-
-    Controls.Menu {
-        id: attachmentMenu
-        property int attachmentIndex: -1
-
-        Controls.MenuItem {
-            text: qsTr("Open")
-            icon.name: "document-open"
-            onTriggered: {
-                var a = messageView.attachments[attachmentMenu.attachmentIndex]
-                if (a) Qt.openUrlExternally("file://" + a.file_path)
-            }
-        }
-        Controls.MenuItem {
-            text: qsTr("Save As…")
-            icon.name: "document-save"
-            onTriggered: {
-                var a = messageView.attachments[attachmentMenu.attachmentIndex]
-                if (!a) return
-                messageView.saveFileSrc = a.file_path
-                saveDialog.selectedFile = ""
-                saveDialog.visible = true
-            }
-        }
-    }
-
-    function openMenu(index, item) {
-        attachmentMenu.attachmentIndex = index
-        attachmentMenu.popup(item, 0, item.height)
     }
 
     ColumnLayout {
@@ -404,23 +328,6 @@ Kirigami.Separator {
         requestAttachments()
     }
 
-    FileDialog {
-        id: saveDialog
-        title: qsTr("Save Attachment")
-        fileMode: FileDialog.SaveFile
-        currentFile: messageView.saveFileSrc ? "file://" + messageView.saveFileSrc : ""
-
-        onAccepted: {
-            var dest = saveDialog.selectedFile.toString()
-            if (dest.indexOf("file://") === 0) {
-                dest = dest.substring(7)
-            }
-            if (dest.length > 0 && messageView.saveFileSrc.length > 0) {
-                Pelliper.DaemonClient.copyFile(messageView.saveFileSrc, dest)
-            }
-        }
-    }
-
     Controls.Dialog {
         id: printDialog
         title: qsTr("Print Message")
@@ -452,26 +359,6 @@ Kirigami.Separator {
         if (currentUid < 0) return
         Pelliper.DaemonClient.listAttachments(
             messageView.accountId, messageView.folderPath, messageView.currentUid)
-    }
-
-    function attachmentIcon(contentType) {
-        var t = (contentType || "").toLowerCase()
-        if (t.indexOf("image/") === 0) return "image-x-generic"
-        if (t.indexOf("video/") === 0) return "video-x-generic"
-        if (t.indexOf("audio/") === 0) return "audio-x-generic"
-        if (t.indexOf("text/") === 0) return "text-x-generic"
-        if (t === "application/pdf") return "application-pdf"
-        if (t === "application/zip") return "package-x-generic"
-        if (t.indexOf("application/vnd.openxmlformats-officedocument") === 0) return "x-office-document"
-        if (t.indexOf("application/") === 0) return "package-x-generic"
-        return "unknown"
-    }
-
-    function formatFileSize(size) {
-        if (!size) return ""
-        if (size < 1024) return size + " B"
-        if (size < 1024 * 1024) return (size / 1024).toFixed(1) + " KB"
-        return (size / (1024 * 1024)).toFixed(1) + " MB"
     }
 
     function loadBodyToView() {

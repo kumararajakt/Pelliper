@@ -81,8 +81,6 @@ Kirigami.ApplicationWindow {
         AddAccountPage {}
     }
 
-    readonly property var accountModel: Pelliper.AccountModel
-
     Component.onCompleted: {
         if (Pelliper.AccountModel.count > 0) {
             root.pageStack.push(mainWindowComponent);
