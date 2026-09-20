@@ -4,7 +4,7 @@ import QtQuick.Controls as Controls
 import QtQuick.Dialogs
 import QtCore
 import org.kde.kirigami as Kirigami
-import org.kde.pelliper as Pelliper
+import app.pelliper as Pelliper
 
 Kirigami.Page {
     id: root

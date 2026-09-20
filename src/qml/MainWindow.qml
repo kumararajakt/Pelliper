@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
-import org.kde.pelliper as Pelliper
+import app.pelliper as Pelliper
 
 Kirigami.Page {
     id: mainPage

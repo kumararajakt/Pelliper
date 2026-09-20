@@ -4,7 +4,7 @@ set_target_properties(pelliper PROPERTIES AUTOMOC ON)
 
 ecm_add_qml_module(pelliper
     URI
-    org.kde.pelliper
+    app.pelliper
     IMPORT_DEPENDENCIES
     QtWebEngine
 )

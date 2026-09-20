@@ -7,9 +7,9 @@
 #include <QFile>
 #include <QCryptographicHash>
 
-static const QString SERVICE = QStringLiteral("org.kde.pelliper.Daemon");
-static const QString PATH = QStringLiteral("/org/kde/pelliper/Daemon");
-static const QString INTERFACE = QStringLiteral("org.kde.pelliper.Daemon");
+static const QString SERVICE = QStringLiteral("app.pelliper.Daemon");
+static const QString PATH = QStringLiteral("/app/pelliper/Daemon");
+static const QString INTERFACE = QStringLiteral("app.pelliper.Daemon");
 
 DaemonClient::DaemonClient(QObject *parent)
     : QObject(parent)

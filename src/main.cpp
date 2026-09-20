@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
     KLocalization::setupLocalizedContext(&engine);
-    engine.loadFromModule("org.kde.pelliper", "Main");
+    engine.loadFromModule("app.pelliper", "Main");
 
     if (engine.rootObjects().isEmpty()) {
         return -1;
