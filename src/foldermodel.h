@@ -29,6 +29,8 @@ struct FolderEntry {
     QString iconName;
     FolderRole role = FolderRole::Custom;
     bool isEssential = false;
+    /// Persisted SPECIAL-USE kind ("inbox", "sent", ..., "custom").
+    QString kind;
 };
 
 struct TreeNode {
@@ -94,7 +96,11 @@ private:
     void rebuildTree();
     static QString cacheDbPath();
     static QString displayNameFromPath(const QString &path);
-    static QString iconNameFromPath(const QString &path);
+    static QString iconNameFromRole(FolderRole role);
+    /// Resolve a folder's role from the persisted SPECIAL-USE kind string
+    /// ("inbox", "sent", "trash", ...), falling back to path-name heuristics
+    /// when the daemon reported no attribute (kind "custom" or empty).
+    static FolderRole roleFromKind(const QString &kind, const QString &path);
     static FolderRole classifyFolder(const QString &path);
     static int folderOrder(FolderRole role);
     static int depthFromPath(const QString &path);
@@ -104,6 +110,7 @@ private:
         QString path;
         int unreadCount;
         bool noselect;
+        QString kind;
     };
     QList<RawFolder> m_rawFolders;
     QMap<int, QString> m_accountEmails;

@@ -10,8 +10,6 @@
 #include <KLocalizedString>
 #include <KIconTheme>
 
-#include "autodiscover.h"
-
 namespace {
 void loadEnvFile(const QString &path)
 {

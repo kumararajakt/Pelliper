@@ -146,9 +146,31 @@ QString FolderModel::displayNameFromPath(const QString &path)
     return prettyNames.value(name, name);
 }
 
-QString FolderModel::iconNameFromPath(const QString &path)
+FolderRole FolderModel::roleFromKind(const QString &kind, const QString &path)
 {
-    FolderRole role = classifyFolder(path);
+    // The persisted kind is authoritative when the daemon identified a
+    // SPECIAL-USE attribute (or its path-heuristic fallback). Empty/custom
+    // means "no attribute seen" — keep the name-based behavior for those
+    // (also covers rows from before the kind column existed).
+    if (kind.compare(QStringLiteral("inbox")) == 0)
+        return FolderRole::Inbox;
+    if (kind.compare(QStringLiteral("starred")) == 0)
+        return FolderRole::Starred;
+    if (kind.compare(QStringLiteral("sent")) == 0)
+        return FolderRole::Sent;
+    if (kind.compare(QStringLiteral("drafts")) == 0)
+        return FolderRole::Drafts;
+    if (kind.compare(QStringLiteral("archive")) == 0)
+        return FolderRole::Archive;
+    if (kind.compare(QStringLiteral("junk")) == 0)
+        return FolderRole::Junk;
+    if (kind.compare(QStringLiteral("trash")) == 0)
+        return FolderRole::Trash;
+    return classifyFolder(path);
+}
+
+QString FolderModel::iconNameFromRole(FolderRole role)
+{
     switch (role) {
     case FolderRole::Inbox:    return QStringLiteral("mail-folder-inbox");
     case FolderRole::Starred:  return QStringLiteral("folder-important");
@@ -188,13 +210,14 @@ void FolderModel::refresh()
 
         QSqlQuery query(db);
         if (query.exec(QStringLiteral(
-                "SELECT account_id, path, unread_count, noselect FROM folders ORDER BY path"))) {
+                "SELECT account_id, path, unread_count, noselect, kind FROM folders ORDER BY path"))) {
             while (query.next()) {
                 RawFolder rf;
                 rf.accountId = query.value(0).toInt();
                 rf.path = query.value(1).toString();
                 rf.unreadCount = query.value(2).toInt();
                 rf.noselect = query.value(3).toBool();
+                rf.kind = query.value(4).toString();
                 newRawFolders.append(rf);
             }
         }
@@ -313,15 +336,36 @@ void FolderModel::rebuildTree()
             entry.accountId = acid;
             entry.path = rf.path;
             entry.unreadCount = rf.unreadCount;
-            entry.role = classifyFolder(rf.path);
+            entry.role = roleFromKind(rf.kind, rf.path);
             entry.isEssential = (entry.role != FolderRole::Custom);
             entry.displayName = displayNameFromPath(rf.path);
-            entry.iconName = iconNameFromPath(rf.path);
+            entry.iconName = iconNameFromRole(entry.role);
+            entry.kind = rf.kind;
 
             if (entry.isEssential) {
                 essentials.append(entry);
             } else {
                 customs.append(rf);
+            }
+        }
+
+        // If the account has [Gmail]/ namespace folders, root-level essentials
+        // (like a user-created "Trash") are not real system folders — demote them
+        // to customs so they get a normal folder icon.
+        bool hasGmailNs = false;
+        for (const auto &rf : std::as_const(customs))
+            if (rf.path.startsWith(QStringLiteral("[Gmail]/"))) { hasGmailNs = true; break; }
+        for (const auto &e : std::as_const(essentials))
+            if (e.path.startsWith(QStringLiteral("[Gmail]/"))) { hasGmailNs = true; break; }
+        if (hasGmailNs) {
+            auto it = essentials.begin();
+            while (it != essentials.end()) {
+                if (!it->path.startsWith(QStringLiteral("[Gmail]/"))) {
+                    customs.append({it->accountId, it->path, it->unreadCount, false, it->kind});
+                    it = essentials.erase(it);
+                } else {
+                    ++it;
+                }
             }
         }
 
@@ -331,12 +375,16 @@ void FolderModel::rebuildTree()
                       return folderOrder(a.role) < folderOrder(b.role);
                   });
 
+        // Map from path to node for parent lookup (essential + custom)
+        QMap<QString, TreeNode *> allNodes;
+
         // Add essential folders as direct children of account node
         for (const auto &entry : std::as_const(essentials)) {
             auto *node = new TreeNode;
             node->entry = entry;
             node->parentNode = accountNode;
             accountNode->children.append(node);
+            allNodes.insert(entry.path, node);
             ++m_totalCount;
         }
 
@@ -351,24 +399,22 @@ void FolderModel::rebuildTree()
                       return a.path.toLower() < b.path.toLower();
                   });
 
-        // Map from path to node for quick parent lookup
-        QMap<QString, TreeNode *> customNodes;
-
         for (const auto &rf : std::as_const(customs)) {
             FolderEntry entry;
             entry.accountId = acid;
             entry.path = rf.path;
             entry.unreadCount = rf.unreadCount;
-            entry.role = FolderRole::Custom;
+            entry.role = roleFromKind(rf.kind, rf.path);
             entry.isEssential = false;
             entry.displayName = displayNameFromPath(rf.path);
-            entry.iconName = iconNameFromPath(rf.path);
+            entry.iconName = iconNameFromRole(entry.role);
+            entry.kind = rf.kind;
 
             auto *node = new TreeNode;
             node->entry = entry;
 
-            // Find parent: longest prefix path already in customNodes,
-            // otherwise attach directly under the account header.
+            // Find parent: longest prefix path already in allNodes
+            // (essential or custom), otherwise attach under account header.
             TreeNode *parent = accountNode;
             QString parentPath = rf.path;
             while (!parentPath.isEmpty()) {
@@ -376,15 +422,15 @@ void FolderModel::rebuildTree()
                 if (lastSep <= 0)
                     break;
                 parentPath = parentPath.left(lastSep);
-                if (customNodes.contains(parentPath)) {
-                    parent = customNodes.value(parentPath);
+                if (allNodes.contains(parentPath)) {
+                    parent = allNodes.value(parentPath);
                     break;
                 }
             }
 
             node->parentNode = parent;
             parent->children.append(node);
-            customNodes.insert(rf.path, node);
+            allNodes.insert(rf.path, node);
             ++m_totalCount;
         }
     }

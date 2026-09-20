@@ -13,28 +13,40 @@ Kirigami.ApplicationWindow {
 
     title: "Pelliper"
 
-     PelliperMenuBar {
+    PelliperMenuBar {
         id: appMenuBar
-        onFolderViewModeChanged: function(mode) {
-            var page = root.pageStack.currentItem
+        onFolderViewModeChanged: function (mode) {
+            var page = root.pageStack.currentItem;
             if (page && page.setFolderMode) {
-                page.setFolderMode(mode)
+                page.setFolderMode(mode);
             }
         }
     }
 
-    Shortcut { sequence: "Ctrl+N"; onActivated: {
-        var page = root.pageStack.currentItem
-        if (page && page.openCompose) page.openCompose()
-    }}
-    Shortcut { sequence: "Ctrl+R"; onActivated: {
-        var page = root.pageStack.currentItem
-        if (page && page.refreshMessages) page.refreshMessages()
-    }}
-    Shortcut { sequence: "Ctrl+S"; onActivated: {
-        root.pageStack.layers.push(searchPageComponent)
-    }}
+    Shortcut {
+        sequence: "Ctrl+N"
+        onActivated: {
+            var page = root.pageStack.currentItem;
+            if (page && page.openCompose)
+                page.openCompose();
+        }
+    }
 
+    Shortcut {
+        sequence: "Ctrl+R"
+        onActivated: {
+            var page = root.pageStack.currentItem;
+            if (page && page.refreshMessages)
+                page.refreshMessages();
+        }
+    }
+
+    Shortcut {
+        sequence: "Ctrl+S"
+        onActivated: {
+            root.pageStack.layers.push(searchPageComponent);
+        }
+    }
 
     Component {
         id: settingsPageComponent
@@ -73,54 +85,53 @@ Kirigami.ApplicationWindow {
 
     Component.onCompleted: {
         if (Pelliper.AccountModel.count > 0) {
-            root.pageStack.push(mainWindowComponent)
+            root.pageStack.push(mainWindowComponent);
         } else {
-            root.pageStack.push(emptyStateComponent)
+            root.pageStack.push(emptyStateComponent);
         }
     }
 
     onClosing: function (close) {
-        close.accepted = false
-        root.hide()
+        close.accepted = false;
+        root.hide();
     }
 
     function openMessageFromExternal(accountId, folderPathString, uid, subject, sender, date) {
         if (Pelliper.AccountModel.count <= 0)
-            return
-        var currentPage = root.pageStack.currentItem
+            return;
+        var currentPage = root.pageStack.currentItem;
         if (!currentPage || typeof currentPage.openMessageInView !== "function") {
-            root.pageStack.clear()
-            root.pageStack.push(mainWindowComponent)
+            root.pageStack.clear();
+            root.pageStack.push(mainWindowComponent);
         }
         if (root.pageStack.layers.depth > 1) {
-            root.pageStack.layers.clear()
+            root.pageStack.layers.clear();
         }
-        root.pageStack.currentItem.openMessageInView(
-            accountId, folderPathString, uid, subject, sender, date)
-        root.show()
-        root.raise()
-        root.requestActivate()
+        root.pageStack.currentItem.openMessageInView(accountId, folderPathString, uid, subject, sender, date);
+        root.show();
+        root.raise();
+        root.requestActivate();
     }
 
     Connections {
         target: Pelliper.TrayNotifier
         function onOpenMessage(accountId, folderPathString, uid, subject, sender, date) {
-            root.openMessageFromExternal(accountId, folderPathString, uid, subject, sender, date)
+            root.openMessageFromExternal(accountId, folderPathString, uid, subject, sender, date);
         }
         function onShowWindow() {
-            root.show()
-            root.raise()
-            root.requestActivate()
+            root.show();
+            root.raise();
+            root.requestActivate();
         }
     }
 
     Connections {
         target: Pelliper.DaemonClient
         function onAccountAdded(email) {
-            Pelliper.AccountModel.refresh()
+            Pelliper.AccountModel.refresh();
             if (Pelliper.AccountModel.count > 0) {
-                root.pageStack.clear()
-                root.pageStack.push(mainWindowComponent)
+                root.pageStack.clear();
+                root.pageStack.push(mainWindowComponent);
             }
         }
     }
