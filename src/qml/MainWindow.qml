@@ -14,7 +14,7 @@ Kirigami.Page {
     property int selectedUid: -1
 
     function setFolderMode(mode) {
-        sidebar.unifiedMode = (mode === 1)
+        sidebar.saveFolderMode(mode)
         Pelliper.FolderModel.unifiedMode = sidebar.unifiedMode
         if (sidebar.unifiedMode) {
             sidebar.folderSelected(-1, "INBOX")
@@ -141,8 +141,14 @@ Kirigami.Page {
                 }
 
                 Component.onCompleted: {
+                    // Sync menu bar with saved folder mode
+                    appMenuBar.folderMode = sidebar.unifiedMode ? 1 : 0
+
                     if (Pelliper.FolderModel.count > 0) {
-                        if (sidebar.savedAccountId >= 0 && sidebar.savedFolderPath !== "") {
+                        if (sidebar.unifiedMode) {
+                            // Restore unified mode: select unified inbox
+                            sidebar.folderSelected(-1, "INBOX");
+                        } else if (sidebar.savedAccountId >= 0 && sidebar.savedFolderPath !== "") {
                             sidebar.restoreSelection();
                         } else {
                             // Find the first INBOX across all accounts

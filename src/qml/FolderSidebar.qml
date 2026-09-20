@@ -10,7 +10,7 @@ Controls.ScrollView {
 
     property int savedAccountId: Number(settings.value("lastAccountId", -1))
     property string savedFolderPath: settings.value("lastFolderPath", "")
-    property bool unifiedMode: false
+    property bool unifiedMode: Number(settings.value("unifiedMode", 0)) === 1
 
     signal folderSelected(int accountId, string folderPath)
 
@@ -22,6 +22,11 @@ Controls.ScrollView {
     function saveSelection(accountId, folderPath) {
         settings.setValue("lastAccountId", accountId)
         settings.setValue("lastFolderPath", folderPath)
+    }
+
+    function saveFolderMode(mode) {
+        unifiedMode = (mode === 1)
+        settings.setValue("unifiedMode", mode)
     }
 
     function restoreSelection() {
