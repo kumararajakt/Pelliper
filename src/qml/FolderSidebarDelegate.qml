@@ -92,9 +92,8 @@ Controls.ItemDelegate {
         }
 
         // Unread badge
-        Controls.Label {
+        Kirigami.Badge {
             text: item.unreadCount > 0 ? item.unreadCount.toString() : ""
-            color: Kirigami.Theme.highlightColor
             font.pointSize: 10
             visible: !item.isAccountHeader && item.unreadCount > 0
         }
