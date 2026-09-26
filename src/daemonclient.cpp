@@ -37,7 +37,8 @@ void DaemonClient::addAccount(
     int smtpPort,
     const QString &authType,
     const QString &authToken,
-    const QString &refreshToken
+    const QString &refreshToken,
+    const QString &provider
 ) {
     if (m_busy) {
         return;
@@ -60,7 +61,7 @@ void DaemonClient::addAccount(
          << static_cast<qint32>(imapPort)
          << smtpHost
          << static_cast<qint32>(smtpPort)
-         << authType << authToken << refreshToken;
+         << authType << authToken << refreshToken << provider;
     msg.setArguments(args);
 
     QDBusPendingCall call = QDBusConnection::sessionBus().asyncCall(msg);

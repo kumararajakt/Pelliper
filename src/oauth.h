@@ -31,6 +31,7 @@ class OAuth2 : public QObject
     Q_PROPERTY(bool authenticating READ authenticating NOTIFY authenticatingChanged)
     Q_PROPERTY(QString status READ status NOTIFY statusChanged)
     Q_PROPERTY(bool hasProvider READ hasProvider NOTIFY providerChanged)
+    Q_PROPERTY(QString providerId READ providerId NOTIFY providerChanged)
 
 public:
     explicit OAuth2(QObject *parent = nullptr);
@@ -38,6 +39,7 @@ public:
     bool authenticating() const { return m_authenticating; }
     QString status() const { return m_status; }
     bool hasProvider() const { return !m_provider.id.isEmpty(); }
+    QString providerId() const { return m_provider.id; }
 
     Q_INVOKABLE void detectProvider(const QString &email);
     Q_INVOKABLE void startAuth();

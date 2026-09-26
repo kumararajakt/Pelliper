@@ -29,7 +29,8 @@ public:
         int smtpPort,
         const QString &authType,
         const QString &authToken,
-        const QString &refreshToken = QString()
+        const QString &refreshToken = QString(),
+        const QString &provider = QString()
     );
 
     Q_INVOKABLE void syncAll();

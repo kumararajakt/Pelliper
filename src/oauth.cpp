@@ -49,7 +49,7 @@ QVector<OAuthProvider> OAuth2::knownProviders()
             QStringLiteral("https://login.microsoftonline.com/common/oauth2/v2.0/token"),
             microsoftClientId,
             microsoftClientSecret,
-            QStringLiteral("https://outlook.office365.com/IMAP.AccessAsUser.All https://outlook.office365.com/SMTP.Send offline_access"),
+            QStringLiteral("https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send offline_access"),
             QStringLiteral("outlook.office365.com"),
             993,
             QStringLiteral("smtp.office365.com"),
