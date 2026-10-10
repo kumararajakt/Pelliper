@@ -24,6 +24,7 @@ target_sources(pelliper
     foldermodel.h
     messagemodel.cpp
     messagemodel.h
+    addressfield.h
     threadmodel.cpp
     threadmodel.h
     searchmodel.cpp
@@ -70,6 +71,6 @@ target_link_libraries(pelliper
     KF6::StatusNotifierItem
 )
 
-add_dependencies(pelliper pelliper_daemon)
+# add_dependencies(pelliper pelliper_daemon)
 
 install(TARGETS pelliper ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})

@@ -198,7 +198,7 @@ ColumnLayout {
 
             MouseArea {
                 anchors.fill: parent
-                onClicked: viewMenu.popup(mapToGlobal(width / 2, height / 2))
+                onClicked: viewMenu.popup()
             }
         }
     }

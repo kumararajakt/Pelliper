@@ -1,5 +1,7 @@
 #include "threadmodel.h"
 
+#include "addressfield.h"
+
 #include <QDateTime>
 #include <QFile>
 #include <QSqlError>
@@ -176,19 +178,31 @@ void ThreadModel::loadMessages()
         }
 
         QSqlQuery query(db);
+        // Threading is driven by `message_id` and `references_`, which now
+        // live in `message_headers` — the same rows must be joined in or the
+        // union-find below has nothing to link. Recency orders on `h.date_ts`,
+        // not the raw `h.date` header string.
         if (m_unifiedInbox) {
             query.prepare(QStringLiteral(
-                "SELECT account_id, uid, subject, sender, date, is_read, is_starred, has_attachments, "
-                "preview, message_id, references_ "
-                "FROM messages WHERE folder_path = ? "
-                "ORDER BY date DESC"));
+                "SELECT m.account_id, m.uid, h.subject, h.from_addr, h.date_ts, "
+                "m.is_read, m.is_starred, m.has_attachments, "
+                "m.preview, h.message_id, h.references_ "
+                "FROM messages m "
+                "LEFT JOIN message_headers h "
+                "  ON h.account_id = m.account_id AND h.folder_path = m.folder_path AND h.uid = m.uid "
+                "WHERE m.folder_path = ? "
+                "ORDER BY h.date_ts DESC"));
             query.addBindValue(m_folderPath);
         } else {
             query.prepare(QStringLiteral(
-                "SELECT uid, subject, sender, date, is_read, is_starred, has_attachments, "
-                "preview, message_id, references_ "
-                "FROM messages WHERE account_id = ? AND folder_path = ? "
-                "ORDER BY date DESC"));
+                "SELECT m.uid, h.subject, h.from_addr, h.date_ts, "
+                "m.is_read, m.is_starred, m.has_attachments, "
+                "m.preview, h.message_id, h.references_ "
+                "FROM messages m "
+                "LEFT JOIN message_headers h "
+                "  ON h.account_id = m.account_id AND h.folder_path = m.folder_path AND h.uid = m.uid "
+                "WHERE m.account_id = ? AND m.folder_path = ? "
+                "ORDER BY h.date_ts DESC"));
             query.addBindValue(m_accountId);
             query.addBindValue(m_folderPath);
         }
@@ -202,7 +216,9 @@ void ThreadModel::loadMessages()
                 }
                 row[QStringLiteral("uid")] = query.value(col++);
                 row[QStringLiteral("subject")] = query.value(col++);
-                row[QStringLiteral("sender")] = query.value(col++);
+                // Stored as JSON; the thread header shows the rendered form.
+                row[QStringLiteral("sender")] =
+                    addressDisplayString(query.value(col++).toString());
                 row[QStringLiteral("date")] = query.value(col++);
                 row[QStringLiteral("is_read")] = query.value(col++);
                 row[QStringLiteral("is_starred")] = query.value(col++);

@@ -1,5 +1,7 @@
 #include "messagemodel.h"
 
+#include "addressfield.h"
+
 #include <QDateTime>
 #include <QFile>
 #include <QSqlError>
@@ -203,24 +205,37 @@ void MessageModel::loadMessages(bool append)
         }
 
         QSqlQuery query(db);
+        // Header columns live in `message_headers`; `messages` keeps only
+        // per-message state. Recency sorts on `h.date_ts` (the parsed
+        // timestamp) and never `h.date`, which is the raw Date header and
+        // would sort lexically on the weekday name.
+        const QString dir = m_sortAscending ? QStringLiteral("ASC") : QStringLiteral("DESC");
         QString orderBy;
         if (m_sortRole == QStringLiteral("sender")) {
-            orderBy = m_sortAscending ? QStringLiteral("sender ASC, date DESC") : QStringLiteral("sender DESC, date DESC");
+            // Sorting on the JSON directly, not on the rendered string: every
+            // value starts with the same `{"name":"` prefix, so the comparison
+            // lands on the personal name and then the address — the same order
+            // as sorting the rendered text, without a second expression to keep
+            // in step with `addressDisplayString()`.
+            orderBy = QStringLiteral("h.from_addr %1, h.date_ts DESC").arg(dir);
         } else if (m_sortRole == QStringLiteral("subject")) {
-            orderBy = m_sortAscending ? QStringLiteral("subject ASC, date DESC") : QStringLiteral("subject DESC, date DESC");
+            orderBy = QStringLiteral("h.subject %1, h.date_ts DESC").arg(dir);
         } else if (m_sortRole == QStringLiteral("read")) {
-            orderBy = m_sortAscending ? QStringLiteral("is_read ASC, date DESC") : QStringLiteral("is_read DESC, date DESC");
+            orderBy = QStringLiteral("m.is_read %1, h.date_ts DESC").arg(dir);
         } else {
-            orderBy = m_sortAscending ? QStringLiteral("date ASC") : QStringLiteral("date DESC");
+            orderBy = QStringLiteral("h.date_ts %1").arg(dir);
         }
         query.prepare(QStringLiteral(
-            "SELECT account_id, folder_path, uid, subject, sender, date, "
-            "is_read, is_starred, has_attachments, preview, message_id, references_ "
-            "FROM messages WHERE %1 "
+            "SELECT m.account_id, m.folder_path, m.uid, h.subject, h.from_addr, h.date_ts, "
+            "m.is_read, m.is_starred, m.has_attachments, m.preview, h.message_id, h.references_ "
+            "FROM messages m "
+            "LEFT JOIN message_headers h "
+            "  ON h.account_id = m.account_id AND h.folder_path = m.folder_path AND h.uid = m.uid "
+            "WHERE %1 "
             "ORDER BY %2 LIMIT ? OFFSET ?")
             .arg(m_unifiedInbox
-                ? QStringLiteral("folder_path = ?")
-                : QStringLiteral("account_id = ? AND folder_path = ?"),
+                ? QStringLiteral("m.folder_path = ?")
+                : QStringLiteral("m.account_id = ? AND m.folder_path = ?"),
             orderBy));
         if (m_unifiedInbox) {
             query.addBindValue(m_folderPath);
@@ -238,7 +253,8 @@ void MessageModel::loadMessages(bool append)
                 msg.folderPath = query.value(1).toString();
                 msg.uid = query.value(2).toInt();
                 msg.subject = query.value(3).toString();
-                msg.sender = query.value(4).toString();
+                // Stored as JSON; the list shows the rendered form.
+                msg.sender = addressDisplayString(query.value(4).toString());
                 msg.date = query.value(5).toLongLong();
                 msg.isRead = query.value(6).toBool();
                 msg.isStarred = query.value(7).toBool();

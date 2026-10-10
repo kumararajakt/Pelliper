@@ -1,5 +1,7 @@
 #include "searchmodel.h"
 
+#include "addressfield.h"
+
 #include <QFile>
 #include <QRegularExpression>
 #include <QSqlError>
@@ -176,20 +178,34 @@ void SearchModel::runQuery()
         }
 
         QSqlQuery queryStmt(db);
+        // `messages_fts` rows are keyed on `messages.rowid`; the displayed
+        // subject/sender/date come from the `message_headers` LEFT JOIN, since
+        // those columns no longer exist on `messages`.
         if (fts) {
             queryStmt.prepare(QStringLiteral(
-                "SELECT m.account_id, m.folder_path, m.uid, m.subject, m.sender, m.date, "
+                "SELECT m.account_id, m.folder_path, m.uid, h.subject, h.from_addr, h.date_ts, "
                 "m.preview, m.is_read, m.is_starred "
-                "FROM messages_fts JOIN messages m ON m.rowid = messages_fts.rowid "
-                "WHERE messages_fts MATCH ? ORDER BY m.date DESC LIMIT 100"));
+                "FROM messages_fts "
+                "JOIN messages m ON m.rowid = messages_fts.rowid "
+                "LEFT JOIN message_headers h "
+                "  ON h.account_id = m.account_id AND h.folder_path = m.folder_path AND h.uid = m.uid "
+                "WHERE messages_fts MATCH ? ORDER BY h.date_ts DESC LIMIT 100"));
             queryStmt.addBindValue(ftsMatchQuery(query));
         } else {
             const QString like = QStringLiteral("%%1%").arg(query);
+            // `preview` still lives on `messages`; subject/sender on the header
+            // table, so the fallback needs the join too. `from_addr` holds
+            // JSON, so a substring match reaches any address in the list
+            // (searching a recipient finds the message) as well as the name —
+            // the only downside is that JSON punctuation is matchable text.
             queryStmt.prepare(QStringLiteral(
-                "SELECT account_id, folder_path, uid, subject, sender, date, "
-                "preview, is_read, is_starred "
-                "FROM messages WHERE subject LIKE ? OR sender LIKE ? OR preview LIKE ? "
-                "ORDER BY date DESC LIMIT 100"));
+                "SELECT m.account_id, m.folder_path, m.uid, h.subject, h.from_addr, h.date_ts, "
+                "m.preview, m.is_read, m.is_starred "
+                "FROM messages m "
+                "LEFT JOIN message_headers h "
+                "  ON h.account_id = m.account_id AND h.folder_path = m.folder_path AND h.uid = m.uid "
+                "WHERE h.subject LIKE ? OR h.from_addr LIKE ? OR m.preview LIKE ? "
+                "ORDER BY h.date_ts DESC LIMIT 100"));
             queryStmt.addBindValue(like);
             queryStmt.addBindValue(like);
             queryStmt.addBindValue(like);
@@ -202,7 +218,8 @@ void SearchModel::runQuery()
                 entry.folderPath = queryStmt.value(1).toString();
                 entry.uid = queryStmt.value(2).toInt();
                 entry.subject = queryStmt.value(3).toString();
-                entry.sender = queryStmt.value(4).toString();
+                // Stored as JSON; the result list shows the rendered form.
+                entry.sender = addressDisplayString(queryStmt.value(4).toString());
                 entry.date = queryStmt.value(5).toLongLong();
                 entry.preview = queryStmt.value(6).toString();
                 entry.isRead = queryStmt.value(7).toBool();
