@@ -113,6 +113,12 @@ Kirigami.ApplicationWindow {
                 root.showPassiveNotification(i18n("Send issue: %1", error), "long")
             }
         }
+        function onAttachmentSaved(path) {
+            root.showPassiveNotification(i18n("Saved attachment to %1", path), "short")
+        }
+        function onAttachmentError(error) {
+            root.showPassiveNotification(i18n("Attachment error: %1", error), "long")
+        }
     }
 
     Shortcut {

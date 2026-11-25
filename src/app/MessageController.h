@@ -1,9 +1,11 @@
 #pragma once
 
+#include <QHash>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QObject>
 #include <QString>
+#include <QUrl>
 #include <QVariantList>
 
 class DaemonClient;
@@ -56,11 +58,16 @@ public:
                                  const QString &subject,
                                  const QString &body,
                                  const QVariantList &attachments);
+    Q_INVOKABLE void openAttachment(qint64 attachmentId);
+    Q_INVOKABLE void saveAttachmentAs(qint64 attachmentId, const QUrl &destFileUrl);
+    Q_INVOKABLE void saveAllAttachments(const QUrl &destDirUrl);
 
 Q_SIGNALS:
     void messageChanged();
     void messageRemoved(qint64 messageId);
     void outboxStatus(const QString &status, const QString &error);
+    void attachmentSaved(const QString &path);
+    void attachmentError(const QString &error);
 
 private Q_SLOTS:
     void onResponse(int id, const QJsonObject &result, const QJsonObject &error);
@@ -72,6 +79,7 @@ private:
 
     DaemonClient *m_client = nullptr;
     int m_getReqId = -1;
+    QHash<int, QString> m_pendingAttAction; // reqId -> "open" | destFilePath
 
     qint64 m_messageId = 0;
     qint64 m_accountId = 0;

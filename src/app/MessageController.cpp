@@ -2,6 +2,9 @@
 #include "../ipc/DaemonClient.h"
 
 #include <QDateTime>
+#include <QDesktopServices>
+#include <QDir>
+#include <QFile>
 #include <QJsonDocument>
 
 MessageController::MessageController(DaemonClient *client, QObject *parent)
@@ -93,8 +96,81 @@ void MessageController::sendMessage(qint64 accountId,
     m_client->sendRequest(QStringLiteral("message.send"), params);
 }
 
+void MessageController::openAttachment(qint64 attachmentId)
+{
+    QJsonObject params;
+    params.insert(QStringLiteral("attachment_id"), attachmentId);
+    const int reqId = m_client->sendRequest(QStringLiteral("attachment.get"), params);
+    if (reqId > 0) {
+        m_pendingAttAction.insert(reqId, QStringLiteral("__OPEN__"));
+    }
+}
+
+void MessageController::saveAttachmentAs(qint64 attachmentId, const QUrl &destFileUrl)
+{
+    const QString destPath = destFileUrl.toLocalFile();
+    if (destPath.isEmpty()) {
+        return;
+    }
+    QJsonObject params;
+    params.insert(QStringLiteral("attachment_id"), attachmentId);
+    const int reqId = m_client->sendRequest(QStringLiteral("attachment.get"), params);
+    if (reqId > 0) {
+        m_pendingAttAction.insert(reqId, destPath);
+    }
+}
+
+void MessageController::saveAllAttachments(const QUrl &destDirUrl)
+{
+    const QString dirPath = destDirUrl.toLocalFile();
+    if (dirPath.isEmpty()) {
+        return;
+    }
+    const QDir dir(dirPath);
+    for (const QVariant &v : std::as_const(m_attachments)) {
+        const QVariantMap m = v.toMap();
+        if (m.value(QStringLiteral("is_inline")).toBool()) {
+            continue;
+        }
+        const qint64 attId = m.value(QStringLiteral("id")).toLongLong();
+        const QString fname = m.value(QStringLiteral("filename"), QStringLiteral("attachment")).toString();
+        QJsonObject params;
+        params.insert(QStringLiteral("attachment_id"), attId);
+        const int reqId = m_client->sendRequest(QStringLiteral("attachment.get"), params);
+        if (reqId > 0) {
+            m_pendingAttAction.insert(reqId, dir.filePath(fname));
+        }
+    }
+}
+
 void MessageController::onResponse(int id, const QJsonObject &result, const QJsonObject &error)
 {
+    if (m_pendingAttAction.contains(id)) {
+        const QString action = m_pendingAttAction.take(id);
+        if (!error.isEmpty()) {
+            Q_EMIT attachmentError(error.value(QStringLiteral("message")).toString());
+            return;
+        }
+        const QString localPath = result.value(QStringLiteral("local_path")).toString();
+        if (localPath.isEmpty()) {
+            Q_EMIT attachmentError(QStringLiteral("Attachment download failed"));
+            return;
+        }
+        if (action == QStringLiteral("__OPEN__")) {
+            QDesktopServices::openUrl(QUrl::fromLocalFile(localPath));
+        } else {
+            if (QFile::exists(action)) {
+                QFile::remove(action);
+            }
+            if (QFile::copy(localPath, action)) {
+                Q_EMIT attachmentSaved(action);
+            } else {
+                Q_EMIT attachmentError(QStringLiteral("Failed to write %1").arg(action));
+            }
+        }
+        return;
+    }
+
     if (id != m_getReqId || !error.isEmpty()) {
         return;
     }

@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls as Controls
+import QtQuick.Dialogs
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 
@@ -8,10 +9,29 @@ Item {
 
     property bool allowRemoteImages: false
     property bool preferPlainText: false
+    property double pendingSaveAttId: 0
 
     signal replyRequested()
     signal replyAllRequested()
     signal forwardRequested()
+
+    function formatBytes(b) {
+        if (!b || b <= 0) return ""
+        if (b < 1024) return b + " B"
+        if (b < 1048576) return Math.round(b / 1024) + " KB"
+        return (b / 1048576).toFixed(1) + " MB"
+    }
+
+    FileDialog {
+        id: saveFileDialog
+        fileMode: FileDialog.SaveFile
+        onAccepted: messageController.saveAttachmentAs(viewPane.pendingSaveAttId, selectedFile)
+    }
+
+    FolderDialog {
+        id: saveAllFolderDialog
+        onAccepted: messageController.saveAllAttachments(selectedFolder)
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -137,8 +157,41 @@ Item {
                 delegate: Kirigami.Chip {
                     closable: false
                     icon.name: "mail-attachment"
-                    text: modelData.filename
+                    text: {
+                        const sz = viewPane.formatBytes(modelData.size_bytes)
+                        return sz.length > 0 ? (modelData.filename + " (" + sz + ")") : modelData.filename
+                    }
+                    onClicked: messageController.openAttachment(modelData.id)
+
+                    Controls.Menu {
+                        id: attMenu
+                        Controls.MenuItem {
+                            text: i18n("Open")
+                            icon.name: "document-open"
+                            onTriggered: messageController.openAttachment(modelData.id)
+                        }
+                        Controls.MenuItem {
+                            text: i18n("Save As…")
+                            icon.name: "document-save-as"
+                            onTriggered: {
+                                viewPane.pendingSaveAttId = modelData.id
+                                saveFileDialog.currentFile = modelData.filename
+                                saveFileDialog.open()
+                            }
+                        }
+                    }
+
+                    TapHandler {
+                        acceptedButtons: Qt.RightButton
+                        onTapped: attMenu.popup()
+                    }
                 }
+            }
+            Controls.ToolButton {
+                visible: messageController.attachments.length > 1
+                icon.name: "document-save-all"
+                text: i18n("Save All")
+                onClicked: saveAllFolderDialog.open()
             }
         }
 
