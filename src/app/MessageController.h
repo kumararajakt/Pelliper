@@ -27,6 +27,7 @@ class MessageController : public QObject
     Q_PROPERTY(bool unread READ unread NOTIFY messageChanged)
     Q_PROPERTY(bool starred READ starred NOTIFY messageChanged)
     Q_PROPERTY(QVariantList attachments READ attachments NOTIFY messageChanged)
+    Q_PROPERTY(QVariantList threadMessages READ threadMessages NOTIFY messageChanged)
 
 public:
     explicit MessageController(DaemonClient *client, QObject *parent = nullptr);
@@ -45,6 +46,7 @@ public:
     bool unread() const { return m_unread; }
     bool starred() const { return m_starred; }
     QVariantList attachments() const { return m_attachments; }
+    QVariantList threadMessages() const { return m_threadMessages; }
 
     Q_INVOKABLE void openMessage(qint64 accountId, qint64 messageId);
     Q_INVOKABLE void toggleRead(qint64 messageId, bool markRead);
@@ -105,4 +107,5 @@ private:
     bool m_unread = false;
     bool m_starred = false;
     QVariantList m_attachments;
+    QVariantList m_threadMessages;
 };

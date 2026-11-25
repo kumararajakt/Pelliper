@@ -200,6 +200,77 @@ Item {
         Controls.ScrollView {
             Layout.fillWidth: true
             Layout.fillHeight: true
+            visible: messageController.threadMessages.length > 1
+
+            ColumnLayout {
+                width: viewPane.width - Kirigami.Units.largeSpacing * 3
+                spacing: Kirigami.Units.smallSpacing
+
+                Repeater {
+                    model: messageController.threadMessages
+                    delegate: Kirigami.AbstractCard {
+                        id: threadCard
+                        Layout.fillWidth: true
+                        property bool isExpanded: modelData.expanded
+
+                        contentItem: ColumnLayout {
+                            spacing: Kirigami.Units.smallSpacing
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Controls.Label {
+                                    Layout.fillWidth: true
+                                    text: modelData.senderName
+                                    font.bold: true
+                                    elide: Text.ElideRight
+                                }
+                                Controls.Label {
+                                    text: modelData.dateText
+                                    opacity: 0.7
+                                    font.pointSize: Kirigami.Theme.smallFont.pointSize
+                                }
+                                TapHandler {
+                                    onTapped: threadCard.isExpanded = !threadCard.isExpanded
+                                }
+                            }
+
+                            Controls.Label {
+                                visible: !threadCard.isExpanded
+                                Layout.fillWidth: true
+                                text: modelData.snippet
+                                opacity: 0.7
+                                elide: Text.ElideRight
+                            }
+
+                            Controls.TextArea {
+                                visible: threadCard.isExpanded
+                                Layout.fillWidth: true
+                                readOnly: true
+                                wrapMode: TextEdit.Wrap
+                                textFormat: (!viewPane.preferPlainText && modelData.textHtml && modelData.textHtml.length > 0)
+                                    ? TextEdit.RichText
+                                    : TextEdit.PlainText
+                                text: {
+                                    if (!modelData.bodySynced && (!modelData.textPlain || modelData.textPlain.length === 0)) {
+                                        return i18n("Loading message body…")
+                                    }
+                                    if (!viewPane.preferPlainText && modelData.textHtml && modelData.textHtml.length > 0) {
+                                        return modelData.textHtml
+                                    }
+                                    return modelData.textPlain || ""
+                                }
+                                background: null
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Controls.ScrollView {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: messageController.threadMessages.length <= 1
             Controls.TextArea {
                 readOnly: true
                 wrapMode: TextEdit.Wrap

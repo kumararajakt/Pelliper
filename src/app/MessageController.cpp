@@ -242,6 +242,33 @@ void MessageController::onResponse(int id, const QJsonObject &result, const QJso
         m_attachments.append(v.toObject().toVariantMap());
     }
 
+    m_threadMessages.clear();
+    const QJsonArray threadArr = result.value(QStringLiteral("thread")).toArray();
+    for (int i = 0; i < threadArr.size(); ++i) {
+        const QJsonObject tm = threadArr.at(i).toObject();
+        QString sName;
+        QString sAddr;
+        extractFirstAddress(tm.value(QStringLiteral("from_json")).toString(), sName, sAddr);
+        const qint64 mts = tm.value(QStringLiteral("date_ts")).toInteger();
+        const int mflags = tm.value(QStringLiteral("flags_bitmask")).toInt();
+        const bool isUnread = (mflags & 1) == 0;
+        const bool isLatest = (i == threadArr.size() - 1);
+
+        QVariantMap entry;
+        entry.insert(QStringLiteral("id"), tm.value(QStringLiteral("id")).toInteger());
+        entry.insert(QStringLiteral("senderName"), sName);
+        entry.insert(QStringLiteral("senderAddress"), sAddr);
+        entry.insert(QStringLiteral("dateText"),
+                     mts > 0 ? QDateTime::fromSecsSinceEpoch(mts).toString(QStringLiteral("MMM d, h:mm AP")) : QString());
+        entry.insert(QStringLiteral("snippet"), tm.value(QStringLiteral("snippet")).toString());
+        entry.insert(QStringLiteral("textPlain"), tm.value(QStringLiteral("text_plain")).toString());
+        entry.insert(QStringLiteral("textHtml"), tm.value(QStringLiteral("text_html")).toString());
+        entry.insert(QStringLiteral("bodySynced"), tm.value(QStringLiteral("body_synced")).toBool());
+        entry.insert(QStringLiteral("unread"), isUnread);
+        entry.insert(QStringLiteral("expanded"), isLatest || isUnread);
+        m_threadMessages.append(entry);
+    }
+
     Q_EMIT messageChanged();
 }
 
