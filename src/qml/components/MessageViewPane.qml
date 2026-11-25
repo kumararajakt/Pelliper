@@ -40,6 +40,13 @@ Item {
         onAccepted: messageController.saveEml(selectedFile, rawSourceArea.text)
     }
 
+    FileDialog {
+        id: exportPdfDialog
+        fileMode: FileDialog.SaveFile
+        nameFilters: [i18n("PDF Document (*.pdf)")]
+        onAccepted: messageController.exportPdf(selectedFile)
+    }
+
     Connections {
         target: messageController
         function onRawSourceReady(rawText) {
@@ -153,6 +160,14 @@ Item {
                         text: i18n("View Source / Headers (.eml)…")
                         icon.name: "view-code"
                         onTriggered: messageController.fetchRawSource(messageController.messageId)
+                    }
+                    Controls.MenuItem {
+                        text: i18n("Export as PDF…")
+                        icon.name: "application-pdf"
+                        onTriggered: {
+                            exportPdfDialog.currentFile = "message.pdf"
+                            exportPdfDialog.open()
+                        }
                     }
                 }
             }

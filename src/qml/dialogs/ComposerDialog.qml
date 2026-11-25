@@ -18,6 +18,7 @@ Kirigami.Dialog {
     property string draftStatusText: ""
     property var attachmentsList: []
     property bool showCcBcc: false
+    property bool richTextMode: false
 
     signal sendRequested(var accountId, string to, string cc, string bcc, string subject, string body, var attachments)
 
@@ -149,11 +150,44 @@ Kirigami.Dialog {
                 id: toField
                 Layout.fillWidth: true
                 placeholderText: i18n("recipient@example.com")
+                onTextChanged: {
+                    const lastPart = text.split(",").pop().trim()
+                    messageController.suggestContacts(lastPart)
+                    if (lastPart.length > 0) contactPopup.open()
+                    else contactPopup.close()
+                }
             }
             Controls.Button {
                 flat: true
                 text: composer.showCcBcc ? i18n("Hide Cc/Bcc") : i18n("Cc/Bcc")
                 onClicked: composer.showCcBcc = !composer.showCcBcc
+            }
+        }
+
+        Controls.Popup {
+            id: contactPopup
+            x: toField.x
+            y: toField.y + toField.height + 2
+            width: toField.width
+            padding: 0
+            visible: opened && messageController.contactSuggestions.length > 0
+            contentItem: ListView {
+                implicitHeight: Math.min(contentHeight, 160)
+                model: messageController.contactSuggestions
+                delegate: Controls.ItemDelegate {
+                    width: ListView.view.width
+                    text: modelData.name && modelData.name.length > 0
+                        ? (modelData.name + " <" + modelData.address + ">")
+                        : modelData.address
+                    onClicked: {
+                        const parts = toField.text.split(",")
+                        parts.pop()
+                        parts.push(" " + modelData.address)
+                        toField.text = parts.join(",").replace(/^,\s*/, "").trim() + ", "
+                        contactPopup.close()
+                        toField.forceActiveFocus()
+                    }
+                }
             }
         }
 
@@ -199,13 +233,42 @@ Kirigami.Dialog {
             }
         }
 
+        Controls.ToolBar {
+            Layout.fillWidth: true
+            RowLayout {
+                anchors.fill: parent
+                Controls.ToolButton {
+                    icon.name: "format-text-bold"
+                    Controls.ToolTip.text: i18n("Bold")
+                    onClicked: bodyArea.insert(bodyArea.cursorPosition, "**bold**")
+                }
+                Controls.ToolButton {
+                    icon.name: "format-text-italic"
+                    Controls.ToolTip.text: i18n("Italic")
+                    onClicked: bodyArea.insert(bodyArea.cursorPosition, "*italic*")
+                }
+                Controls.ToolButton {
+                    icon.name: "format-list-unordered"
+                    Controls.ToolTip.text: i18n("Bullet List")
+                    onClicked: bodyArea.insert(bodyArea.cursorPosition, "\n- ")
+                }
+                Item { Layout.fillWidth: true }
+                Controls.Switch {
+                    text: i18n("Rich Text")
+                    checked: composer.richTextMode
+                    onToggled: composer.richTextMode = checked
+                }
+            }
+        }
+
         Controls.ScrollView {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            Layout.minimumHeight: 240
+            Layout.minimumHeight: 220
             Controls.TextArea {
                 id: bodyArea
                 wrapMode: TextEdit.Wrap
+                textFormat: composer.richTextMode ? TextEdit.RichText : TextEdit.PlainText
                 placeholderText: i18n("Write your message…")
                 onTextChanged: { composer.dirty = true; draftAutoSaveTimer.restart() }
             }

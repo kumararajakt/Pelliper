@@ -6,6 +6,8 @@
 #include <QDir>
 #include <QFile>
 #include <QJsonDocument>
+#include <QPdfWriter>
+#include <QTextDocument>
 
 MessageController::MessageController(DaemonClient *client, QObject *parent)
     : QObject(parent)
@@ -200,8 +202,56 @@ void MessageController::saveEml(const QUrl &destFileUrl, const QString &rawText)
     }
 }
 
+void MessageController::exportPdf(const QUrl &destFileUrl)
+{
+    const QString path = destFileUrl.toLocalFile();
+    if (path.isEmpty()) {
+        return;
+    }
+    QPdfWriter writer(path);
+    writer.setTitle(m_subject);
+    QTextDocument doc;
+    const QString bodyContent = !m_textHtml.isEmpty()
+        ? m_textHtml
+        : QStringLiteral("<pre>%1</pre>").arg(m_textPlain.toHtmlEscaped());
+    doc.setHtml(QStringLiteral("<h2>%1</h2><p><b>From:</b> %2 &lt;%3&gt;<br/><b>To:</b> %4<br/><b>Date:</b> %5</p><hr/>%6")
+                    .arg(m_subject.toHtmlEscaped(),
+                         m_senderName.toHtmlEscaped(),
+                         m_senderAddress.toHtmlEscaped(),
+                         m_toText.toHtmlEscaped(),
+                         m_dateText.toHtmlEscaped(),
+                         bodyContent));
+    doc.print(&writer);
+    Q_EMIT attachmentSaved(path);
+}
+
+void MessageController::suggestContacts(const QString &query)
+{
+    if (query.trimmed().isEmpty()) {
+        m_contactSuggestions.clear();
+        Q_EMIT contactSuggestionsChanged();
+        return;
+    }
+    QJsonObject params;
+    params.insert(QStringLiteral("query"), query.trimmed());
+    params.insert(QStringLiteral("limit"), 8);
+    m_contactsReqId = m_client->sendRequest(QStringLiteral("contacts.suggest"), params);
+}
+
 void MessageController::onResponse(int id, const QJsonObject &result, const QJsonObject &error)
 {
+    if (id == m_contactsReqId) {
+        m_contactsReqId = -1;
+        m_contactSuggestions.clear();
+        if (error.isEmpty()) {
+            const QJsonArray arr = result.value(QStringLiteral("contacts")).toArray();
+            for (const auto &v : arr) {
+                m_contactSuggestions.append(v.toObject().toVariantMap());
+            }
+        }
+        Q_EMIT contactSuggestionsChanged();
+        return;
+    }
     if (id == m_rawReqId) {
         m_rawReqId = -1;
         if (error.isEmpty()) {

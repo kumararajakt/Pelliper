@@ -28,6 +28,7 @@ class MessageController : public QObject
     Q_PROPERTY(bool starred READ starred NOTIFY messageChanged)
     Q_PROPERTY(QVariantList attachments READ attachments NOTIFY messageChanged)
     Q_PROPERTY(QVariantList threadMessages READ threadMessages NOTIFY messageChanged)
+    Q_PROPERTY(QVariantList contactSuggestions READ contactSuggestions NOTIFY contactSuggestionsChanged)
 
 public:
     explicit MessageController(DaemonClient *client, QObject *parent = nullptr);
@@ -47,6 +48,7 @@ public:
     bool starred() const { return m_starred; }
     QVariantList attachments() const { return m_attachments; }
     QVariantList threadMessages() const { return m_threadMessages; }
+    QVariantList contactSuggestions() const { return m_contactSuggestions; }
 
     Q_INVOKABLE void openMessage(qint64 accountId, qint64 messageId);
     Q_INVOKABLE void toggleRead(qint64 messageId, bool markRead);
@@ -73,6 +75,8 @@ public:
     Q_INVOKABLE void discardDraft(qint64 draftId);
     Q_INVOKABLE void fetchRawSource(qint64 messageId);
     Q_INVOKABLE void saveEml(const QUrl &destFileUrl, const QString &rawText);
+    Q_INVOKABLE void exportPdf(const QUrl &destFileUrl);
+    Q_INVOKABLE void suggestContacts(const QString &query);
 
 Q_SIGNALS:
     void messageChanged();
@@ -82,6 +86,7 @@ Q_SIGNALS:
     void attachmentError(const QString &error);
     void draftSaved(qint64 draftId);
     void rawSourceReady(const QString &rawText);
+    void contactSuggestionsChanged();
 
 private Q_SLOTS:
     void onResponse(int id, const QJsonObject &result, const QJsonObject &error);
@@ -95,7 +100,9 @@ private:
     int m_getReqId = -1;
     int m_draftSaveReqId = -1;
     int m_rawReqId = -1;
+    int m_contactsReqId = -1;
     QHash<int, QString> m_pendingAttAction; // reqId -> "open" | destFilePath
+    QVariantList m_contactSuggestions;
 
     qint64 m_messageId = 0;
     qint64 m_accountId = 0;
