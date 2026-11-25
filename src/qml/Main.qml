@@ -100,6 +100,47 @@ Kirigami.ApplicationWindow {
 
     ComposerDialog {
         id: composerDialog
+        onSendRequested: (accountId, to, cc, bcc, subject, body, attachments) => {
+            const delay = appSettings.undoSendSecs
+            if (delay <= 0) {
+                messageController.sendMessage(accountId, to, cc, bcc, subject, body, attachments)
+                return
+            }
+            undoSendTimer.pendingPayload = {
+                "accountId": accountId,
+                "to": to,
+                "cc": cc,
+                "bcc": bcc,
+                "subject": subject,
+                "body": body,
+                "attachments": attachments
+            }
+            undoSendTimer.interval = delay * 1000
+            undoSendTimer.restart()
+            root.showPassiveNotification(
+                i18n("Sending in %1s…", delay),
+                delay * 1000,
+                i18n("Undo"),
+                function() {
+                    undoSendTimer.stop()
+                    undoSendTimer.pendingPayload = null
+                    root.showPassiveNotification(i18n("Send cancelled"), "short")
+                    composerDialog.open()
+                }
+            )
+        }
+    }
+
+    Timer {
+        id: undoSendTimer
+        property var pendingPayload: null
+        onTriggered: {
+            if (pendingPayload) {
+                const p = pendingPayload
+                pendingPayload = null
+                messageController.sendMessage(p.accountId, p.to, p.cc, p.bcc, p.subject, p.body, p.attachments)
+            }
+        }
     }
 
     Connections {

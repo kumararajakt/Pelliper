@@ -33,3 +33,17 @@ void AppSettings::setShowBodyPreview(bool show)
     m_settings.setValue(QStringLiteral("ui/showBodyPreview"), show);
     Q_EMIT showBodyPreviewChanged();
 }
+
+int AppSettings::undoSendSecs() const
+{
+    return m_settings.value(QStringLiteral("compose/undoSendSecs"), 5).toInt();
+}
+
+void AppSettings::setUndoSendSecs(int secs)
+{
+    if (undoSendSecs() == secs) {
+        return;
+    }
+    m_settings.setValue(QStringLiteral("compose/undoSendSecs"), secs);
+    Q_EMIT undoSendSecsChanged();
+}

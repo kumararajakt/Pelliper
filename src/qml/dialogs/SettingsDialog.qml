@@ -36,6 +36,13 @@ Kirigami.Dialog {
                     currentIndex: appSettings.folderMode === "all" ? 1 : 0
                     onActivated: appSettings.folderMode = (currentIndex === 1 ? "all" : "unified")
                 }
+
+                Controls.ComboBox {
+                    Kirigami.FormData.label: i18n("Undo Send Delay:")
+                    model: [i18n("Off (0s)"), i18n("5 seconds"), i18n("10 seconds")]
+                    currentIndex: appSettings.undoSendSecs === 10 ? 2 : (appSettings.undoSendSecs === 0 ? 0 : 1)
+                    onActivated: appSettings.undoSendSecs = (currentIndex === 2 ? 10 : (currentIndex === 0 ? 0 : 5))
+                }
             }
 
             Kirigami.Separator { Layout.fillWidth: true }

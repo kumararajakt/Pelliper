@@ -107,6 +107,23 @@ int main(int argc, char *argv[])
 
         tray->setContextMenu(trayMenu);
         tray->show();
+
+        QObject::connect(&daemonClient, &DaemonClient::notificationReceived, tray, [tray, &folderModel](const QString &method, const QJsonObject &) {
+            if (method == QStringLiteral("folder.updated")) {
+                int totalUnread = 0;
+                for (int i = 0; i < folderModel.rowCount(); ++i) {
+                    const QModelIndex idx = folderModel.index(i);
+                    if (folderModel.data(idx, FolderModel::IsUnifiedRole).toBool()
+                        && folderModel.data(idx, FolderModel::RoleTypeRole).toString() == QStringLiteral("inbox")) {
+                        totalUnread = folderModel.data(idx, FolderModel::UnreadCountRole).toInt();
+                        break;
+                    }
+                }
+                tray->setToolTip(totalUnread > 0
+                                     ? QStringLiteral("Pelliper (%1 unread)").arg(totalUnread)
+                                     : QStringLiteral("Pelliper"));
+            }
+        });
     }
 
     return app.exec();

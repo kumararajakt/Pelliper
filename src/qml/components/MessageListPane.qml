@@ -9,7 +9,21 @@ ColumnLayout {
 
     property double activeFolderId: 0
     property double selectedMessageId: 0
+    property var selectedIds: []
+    property bool selectionMode: selectedIds.length > 0
     signal messageSelected(var accountId, var messageId, string senderName, string subject, string snippet)
+
+    function toggleSelection(msgId) {
+        const next = selectedIds.slice()
+        const idx = next.indexOf(msgId)
+        if (idx >= 0) next.splice(idx, 1)
+        else next.push(msgId)
+        selectedIds = next
+    }
+
+    function clearSelection() {
+        selectedIds = []
+    }
 
     function focusSearch() {
         searchField.forceActiveFocus()
@@ -120,6 +134,65 @@ ColumnLayout {
         opacity: 0.7
     }
 
+    Controls.ToolBar {
+        visible: listPane.selectionMode
+        Layout.fillWidth: true
+        RowLayout {
+            anchors.fill: parent
+            Controls.Label {
+                text: i18np("%1 selected", "%1 selected", listPane.selectedIds.length)
+                font.bold: true
+            }
+            Item { Layout.fillWidth: true }
+            Controls.ToolButton {
+                icon.name: "mail-mark-read"
+                Controls.ToolTip.text: i18n("Mark Read")
+                onClicked: {
+                    for (const id of listPane.selectedIds) {
+                        messageController.toggleRead(id, true)
+                    }
+                    listPane.clearSelection()
+                }
+            }
+            Controls.ToolButton {
+                icon.name: "starred-symbolic"
+                Controls.ToolTip.text: i18n("Star")
+                onClicked: {
+                    for (const id of listPane.selectedIds) {
+                        messageController.toggleStar(id, true)
+                    }
+                    listPane.clearSelection()
+                }
+            }
+            Controls.ToolButton {
+                icon.name: "folder-archive"
+                Controls.ToolTip.text: i18n("Archive")
+                onClicked: {
+                    for (const id of listPane.selectedIds) {
+                        messageController.archiveMessage(id)
+                        threadListModel.removeMessageOptimistic(id)
+                    }
+                    listPane.clearSelection()
+                }
+            }
+            Controls.ToolButton {
+                icon.name: "edit-delete"
+                Controls.ToolTip.text: i18n("Delete")
+                onClicked: {
+                    for (const id of listPane.selectedIds) {
+                        messageController.deleteMessage(id)
+                        threadListModel.removeMessageOptimistic(id)
+                    }
+                    listPane.clearSelection()
+                }
+            }
+            Controls.ToolButton {
+                icon.name: "dialog-cancel"
+                onClicked: listPane.clearSelection()
+            }
+        }
+    }
+
     Item {
         Layout.fillWidth: true
         Layout.fillHeight: true
@@ -133,7 +206,7 @@ ColumnLayout {
 
             delegate: Controls.ItemDelegate {
                 width: messageList.width
-                highlighted: model.messageId === listPane.selectedMessageId
+                highlighted: listPane.selectedIds.indexOf(model.messageId) >= 0 || model.messageId === listPane.selectedMessageId
 
                 contentItem: ColumnLayout {
                     spacing: 2
@@ -176,10 +249,19 @@ ColumnLayout {
                     }
                 }
 
-                onClicked: {
+                onClicked: (mouse) => {
+                    if (listPane.selectionMode || (mouse && (mouse.modifiers & Qt.ControlModifier))) {
+                        listPane.toggleSelection(model.messageId)
+                        return
+                    }
                     listPane.selectedMessageId = model.messageId
                     threadListModel.requestBody(model.accountId, model.messageId)
                     listPane.messageSelected(model.accountId, model.messageId, model.senderName, model.subject, model.snippet)
+                }
+
+                TapHandler {
+                    acceptedButtons: Qt.RightButton
+                    onTapped: listPane.toggleSelection(model.messageId)
                 }
             }
         }

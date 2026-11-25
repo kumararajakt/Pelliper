@@ -19,6 +19,8 @@ Kirigami.Dialog {
     property var attachmentsList: []
     property bool showCcBcc: false
 
+    signal sendRequested(var accountId, string to, string cc, string bcc, string subject, string body, var attachments)
+
     function signatureForAccount(accId) {
         const list = accountController.accounts
         for (let i = 0; i < list.length; ++i) {
@@ -238,7 +240,7 @@ Kirigami.Dialog {
                 onClicked: {
                     draftAutoSaveTimer.stop()
                     messageController.discardDraft(composer.draftId)
-                    messageController.sendMessage(
+                    composer.sendRequested(
                         composer.accountId,
                         toField.text.trim(),
                         ccField.text.trim(),
