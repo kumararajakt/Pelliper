@@ -44,9 +44,39 @@ Kirigami.Dialog {
                 wizard.authType = config.auth_type || "password"
                 wizard.oauthProvider = config.oauth_provider || ""
                 wizard.step = 3
+                if (wizard.authType === "oauth2") {
+                    accountController.startOAuth(wizard.oauthProvider, emailField.text)
+                }
             } else {
                 wizard.step = 2
             }
+        }
+        function onOauthUrlReady(authUrl) {
+            wizard.oauthUrl = authUrl
+            Qt.openUrlExternally(authUrl)
+        }
+        function onOauthCompleted(success, accessToken, refreshToken, expiresAt, error) {
+            if (!success) {
+                errorBanner.text = error
+                errorBanner.visible = true
+                return
+            }
+            wizard.step = 4
+            accountController.testAndAddAccount({
+                "email": emailField.text.trim(),
+                "display_name": nameField.text.trim(),
+                "imap_host": imapHostField.text.trim(),
+                "imap_port": parseInt(imapPortField.text) || 993,
+                "imap_tls": "tls",
+                "smtp_host": smtpHostField.text.trim(),
+                "smtp_port": parseInt(smtpPortField.text) || 465,
+                "smtp_tls": "tls",
+                "auth_type": "oauth2",
+                "oauth_provider": wizard.oauthProvider.length > 0 ? wizard.oauthProvider : "google",
+                "access_token": accessToken,
+                "refresh_token": refreshToken,
+                "expires_at": expiresAt
+            })
         }
         function onAccountAdded(account) {
             folderModel.refresh()
@@ -218,6 +248,9 @@ Kirigami.Dialog {
                         accountController.lookupAutoconfig(emailField.text)
                     } else if (wizard.step === 2) {
                         wizard.step = 3
+                        if (wizard.authType === "oauth2") {
+                            accountController.startOAuth(wizard.oauthProvider, emailField.text)
+                        }
                     } else if (wizard.step === 3) {
                         wizard.step = 4
                         accountController.testAndAddAccount({

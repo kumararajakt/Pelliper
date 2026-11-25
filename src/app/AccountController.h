@@ -23,6 +23,7 @@ public:
 
     Q_INVOKABLE void refreshAccounts();
     Q_INVOKABLE void lookupAutoconfig(const QString &email);
+    Q_INVOKABLE void startOAuth(const QString &provider, const QString &email);
     Q_INVOKABLE void testAndAddAccount(const QJsonObject &params);
     Q_INVOKABLE void clearAccountCache(qint64 accountId);
     Q_INVOKABLE void removeAccount(qint64 accountId);
@@ -32,11 +33,14 @@ Q_SIGNALS:
     void errorMessageChanged();
     void accountsChanged();
     void autoconfigCompleted(bool found, const QJsonObject &config);
+    void oauthUrlReady(const QString &authUrl);
+    void oauthCompleted(bool success, const QString &accessToken, const QString &refreshToken, qint64 expiresAt, const QString &error);
     void accountAdded(const QJsonObject &account);
     void accountVerifyFailed(const QString &error);
 
 private Q_SLOTS:
     void onResponse(int id, const QJsonObject &result, const QJsonObject &error);
+    void onNotification(const QString &method, const QJsonObject &params);
 
 private:
     void setBusy(bool b);
@@ -49,5 +53,7 @@ private:
 
     int m_listReqId = -1;
     int m_autoconfigReqId = -1;
+    int m_oauthReqId = -1;
     int m_addReqId = -1;
+    QString m_oauthSessionId;
 };

@@ -6,6 +6,7 @@ AccountController::AccountController(DaemonClient *client, QObject *parent)
     , m_client(client)
 {
     connect(m_client, &DaemonClient::responseReceived, this, &AccountController::onResponse);
+    connect(m_client, &DaemonClient::notificationReceived, this, &AccountController::onNotification);
     connect(m_client, &DaemonClient::connectedChanged, this, [this]() {
         if (m_client->isConnected()) {
             refreshAccounts();
@@ -43,6 +44,15 @@ void AccountController::lookupAutoconfig(const QString &email)
     QJsonObject params;
     params.insert(QStringLiteral("email"), email.trimmed());
     m_autoconfigReqId = m_client->sendRequest(QStringLiteral("account.autoconfig"), params);
+}
+
+void AccountController::startOAuth(const QString &provider, const QString &email)
+{
+    setError({});
+    QJsonObject params;
+    params.insert(QStringLiteral("provider"), provider.isEmpty() ? QStringLiteral("google") : provider);
+    params.insert(QStringLiteral("email"), email.trimmed());
+    m_oauthReqId = m_client->sendRequest(QStringLiteral("account.oauth_start"), params);
 }
 
 void AccountController::testAndAddAccount(const QJsonObject &params)
@@ -86,6 +96,17 @@ void AccountController::onResponse(int id, const QJsonObject &result, const QJso
         return;
     }
 
+    if (id == m_oauthReqId) {
+        m_oauthReqId = -1;
+        if (error.isEmpty()) {
+            m_oauthSessionId = result.value(QStringLiteral("session_id")).toString();
+            Q_EMIT oauthUrlReady(result.value(QStringLiteral("auth_url")).toString());
+        } else {
+            setError(error.value(QStringLiteral("message")).toString());
+        }
+        return;
+    }
+
     if (id == m_addReqId) {
         m_addReqId = -1;
         setBusy(false);
@@ -98,4 +119,22 @@ void AccountController::onResponse(int id, const QJsonObject &result, const QJso
             Q_EMIT accountAdded(result.value(QStringLiteral("account")).toObject());
         }
     }
+}
+
+void AccountController::onNotification(const QString &method, const QJsonObject &params)
+{
+    if (method != QStringLiteral("oauth.completed")) {
+        return;
+    }
+    if (!m_oauthSessionId.isEmpty() && params.value(QStringLiteral("session_id")).toString() != m_oauthSessionId) {
+        return;
+    }
+    m_oauthSessionId.clear();
+    const bool ok = params.value(QStringLiteral("success")).toBool();
+    Q_EMIT oauthCompleted(
+        ok,
+        params.value(QStringLiteral("access_token")).toString(),
+        params.value(QStringLiteral("refresh_token")).toString(),
+        params.value(QStringLiteral("expires_at")).toInteger(),
+        params.value(QStringLiteral("error")).toString());
 }
