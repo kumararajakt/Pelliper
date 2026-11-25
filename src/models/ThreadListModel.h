@@ -25,6 +25,7 @@ struct ThreadItem {
 class ThreadListModel : public QAbstractListModel
 {
     Q_OBJECT
+    Q_PROPERTY(bool searchingServer READ searchingServer NOTIFY searchingServerChanged)
 
 public:
     enum Roles {
@@ -47,11 +48,16 @@ public:
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
     QHash<int, QByteArray> roleNames() const override;
 
-    Q_INVOKABLE void search(const QString &query, qint64 folderId = 0);
+    bool searchingServer() const { return m_searchingServer; }
+
+    Q_INVOKABLE void search(const QString &query, qint64 folderId = 0, bool serverSearch = false);
     Q_INVOKABLE void requestBody(qint64 accountId, qint64 messageId);
     Q_INVOKABLE void prefetchRange(int firstRow, int lastRow);
     Q_INVOKABLE void removeMessageOptimistic(qint64 messageId);
     Q_INVOKABLE void updateFlagsOptimistic(qint64 messageId, bool unread, bool starred);
+
+Q_SIGNALS:
+    void searchingServerChanged();
 
 private Q_SLOTS:
     void onResponse(int id, const QJsonObject &result, const QJsonObject &error);
@@ -64,4 +70,6 @@ private:
     DaemonClient *m_client = nullptr;
     QVector<ThreadItem> m_items;
     int m_searchReqId = -1;
+    qint64 m_activeSearchId = 0;
+    bool m_searchingServer = false;
 };

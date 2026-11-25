@@ -29,7 +29,17 @@ ColumnLayout {
     Timer {
         id: searchDebounce
         interval: 150
-        onTriggered: threadListModel.search(searchField.text, listPane.activeFolderId)
+        onTriggered: threadListModel.search(searchField.text, listPane.activeFolderId, false)
+    }
+
+    Timer {
+        id: serverSearchDebounce
+        interval: 450
+        onTriggered: {
+            if (searchField.text.trim().length > 0) {
+                threadListModel.search(searchField.text, listPane.activeFolderId, true)
+            }
+        }
     }
 
     Timer {
@@ -51,7 +61,10 @@ ColumnLayout {
             anchors.fill: parent
             anchors.margins: Kirigami.Units.smallSpacing
             placeholderText: i18n("Search (from:, in:, is:, has:)…")
-            onTextChanged: searchDebounce.restart()
+            onTextChanged: {
+                searchDebounce.restart()
+                serverSearchDebounce.restart()
+            }
             onActiveFocusChanged: {
                 if (activeFocus) {
                     operatorPopup.open()
@@ -95,6 +108,16 @@ ColumnLayout {
                 }
             }
         }
+    }
+
+    Controls.Label {
+        visible: threadListModel.searchingServer
+        Layout.fillWidth: true
+        Layout.leftMargin: Kirigami.Units.smallSpacing
+        Layout.topMargin: 2
+        text: i18n("Searching server…")
+        font.pointSize: Kirigami.Theme.smallFont.pointSize
+        opacity: 0.7
     }
 
     Item {

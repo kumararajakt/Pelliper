@@ -57,14 +57,23 @@ QHash<int, QByteArray> ThreadListModel::roleNames() const
     };
 }
 
-void ThreadListModel::search(const QString &query, qint64 folderId)
+void ThreadListModel::search(const QString &query, qint64 folderId, bool serverSearch)
 {
+    ++m_activeSearchId;
+    const bool wantServer = serverSearch && !query.trimmed().isEmpty();
+    if (m_searchingServer != wantServer) {
+        m_searchingServer = wantServer;
+        Q_EMIT searchingServerChanged();
+    }
+
     QJsonObject params;
     if (folderId > 0) {
         params.insert(QStringLiteral("folder_id"), folderId);
     }
     params.insert(QStringLiteral("query"), query);
     params.insert(QStringLiteral("limit"), 100);
+    params.insert(QStringLiteral("server_search"), wantServer);
+    params.insert(QStringLiteral("search_id"), m_activeSearchId);
     m_searchReqId = m_client->sendRequest(QStringLiteral("message.search"), params);
 }
 
@@ -167,6 +176,38 @@ void ThreadListModel::onNotification(const QString &method, const QJsonObject &p
                 Q_EMIT dataChanged(idx, idx, { SnippetRole, BodySyncedRole });
                 break;
             }
+        }
+    } else if (method == QStringLiteral("search.results_appended")) {
+        const qint64 sid = params.value(QStringLiteral("search_id")).toInteger();
+        if (sid != m_activeSearchId) {
+            return;
+        }
+        const QJsonArray arr = params.value(QStringLiteral("messages")).toArray();
+        if (!arr.isEmpty()) {
+            const int startRow = m_items.size();
+            beginInsertRows(QModelIndex(), startRow, startRow + arr.size() - 1);
+            for (const auto &v : arr) {
+                const QJsonObject m = v.toObject();
+                const int flags = m.value(QStringLiteral("flags_bitmask")).toInt();
+                m_items.append(ThreadItem{
+                    m.value(QStringLiteral("id")).toInteger(),
+                    m.value(QStringLiteral("account_id")).toInteger(),
+                    m.value(QStringLiteral("folder_id")).toInteger(),
+                    extractSender(m.value(QStringLiteral("from_json")).toString()),
+                    m.value(QStringLiteral("subject")).toString(),
+                    m.value(QStringLiteral("snippet")).toString(),
+                    formatTimestamp(m.value(QStringLiteral("date_ts")).toInteger()),
+                    (flags & 1) == 0,
+                    (flags & 2) != 0,
+                    m.value(QStringLiteral("has_attachments")).toBool(),
+                    m.value(QStringLiteral("body_synced")).toBool()
+                });
+            }
+            endInsertRows();
+        }
+        if (params.value(QStringLiteral("done")).toBool() && m_searchingServer) {
+            m_searchingServer = false;
+            Q_EMIT searchingServerChanged();
         }
     }
 }
