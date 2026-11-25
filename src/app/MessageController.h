@@ -71,6 +71,8 @@ public:
                                const QString &subject,
                                const QString &body);
     Q_INVOKABLE void discardDraft(qint64 draftId);
+    Q_INVOKABLE void fetchRawSource(qint64 messageId);
+    Q_INVOKABLE void saveEml(const QUrl &destFileUrl, const QString &rawText);
 
 Q_SIGNALS:
     void messageChanged();
@@ -79,6 +81,7 @@ Q_SIGNALS:
     void attachmentSaved(const QString &path);
     void attachmentError(const QString &error);
     void draftSaved(qint64 draftId);
+    void rawSourceReady(const QString &rawText);
 
 private Q_SLOTS:
     void onResponse(int id, const QJsonObject &result, const QJsonObject &error);
@@ -91,6 +94,7 @@ private:
     DaemonClient *m_client = nullptr;
     int m_getReqId = -1;
     int m_draftSaveReqId = -1;
+    int m_rawReqId = -1;
     QHash<int, QString> m_pendingAttAction; // reqId -> "open" | destFilePath
 
     qint64 m_messageId = 0;

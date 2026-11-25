@@ -33,6 +33,48 @@ Item {
         onAccepted: messageController.saveAllAttachments(selectedFolder)
     }
 
+    FileDialog {
+        id: saveEmlDialog
+        fileMode: FileDialog.SaveFile
+        nameFilters: [i18n("Email Message (*.eml)")]
+        onAccepted: messageController.saveEml(selectedFile, rawSourceArea.text)
+    }
+
+    Connections {
+        target: messageController
+        function onRawSourceReady(rawText) {
+            rawSourceArea.text = rawText
+            rawSourceDialog.open()
+        }
+    }
+
+    Kirigami.Dialog {
+        id: rawSourceDialog
+        title: i18n("Message Source (.eml)")
+        width: 680
+        height: 520
+        padding: Kirigami.Units.largeSpacing
+        standardButtons: Kirigami.Dialog.Close
+        customFooterActions: [
+            Kirigami.Action {
+                text: i18n("Save .eml…")
+                icon.name: "document-save-as"
+                onTriggered: {
+                    saveEmlDialog.currentFile = "message.eml"
+                    saveEmlDialog.open()
+                }
+            }
+        ]
+        Controls.ScrollView {
+            Controls.TextArea {
+                id: rawSourceArea
+                readOnly: true
+                font.family: "monospace"
+                wrapMode: TextEdit.NoWrap
+            }
+        }
+    }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: Kirigami.Units.largeSpacing
@@ -101,6 +143,18 @@ Item {
                 visible: messageController.textHtml.length > 0 && messageController.textPlain.length > 0
                 text: viewPane.preferPlainText ? i18n("HTML") : i18n("Plain Text")
                 onClicked: viewPane.preferPlainText = !viewPane.preferPlainText
+            }
+            Controls.ToolButton {
+                icon.name: "application-menu"
+                onClicked: moreMenu.popup()
+                Controls.Menu {
+                    id: moreMenu
+                    Controls.MenuItem {
+                        text: i18n("View Source / Headers (.eml)…")
+                        icon.name: "view-code"
+                        onTriggered: messageController.fetchRawSource(messageController.messageId)
+                    }
+                }
             }
         }
 

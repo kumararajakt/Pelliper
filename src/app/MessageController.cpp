@@ -174,8 +174,41 @@ void MessageController::discardDraft(qint64 draftId)
     m_client->sendRequest(QStringLiteral("draft.discard"), params);
 }
 
+void MessageController::fetchRawSource(qint64 messageId)
+{
+    if (messageId <= 0) {
+        return;
+    }
+    QJsonObject params;
+    params.insert(QStringLiteral("message_id"), messageId);
+    m_rawReqId = m_client->sendRequest(QStringLiteral("message.get_raw"), params);
+}
+
+void MessageController::saveEml(const QUrl &destFileUrl, const QString &rawText)
+{
+    const QString path = destFileUrl.toLocalFile();
+    if (path.isEmpty()) {
+        return;
+    }
+    QFile f(path);
+    if (f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        f.write(rawText.toUtf8());
+        f.close();
+        Q_EMIT attachmentSaved(path);
+    } else {
+        Q_EMIT attachmentError(QStringLiteral("Failed to write %1").arg(path));
+    }
+}
+
 void MessageController::onResponse(int id, const QJsonObject &result, const QJsonObject &error)
 {
+    if (id == m_rawReqId) {
+        m_rawReqId = -1;
+        if (error.isEmpty()) {
+            Q_EMIT rawSourceReady(result.value(QStringLiteral("raw")).toString());
+        }
+        return;
+    }
     if (id == m_draftSaveReqId) {
         m_draftSaveReqId = -1;
         if (error.isEmpty()) {
