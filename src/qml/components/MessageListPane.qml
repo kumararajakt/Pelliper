@@ -7,8 +7,8 @@ ColumnLayout {
     id: listPane
     spacing: 0
 
-    property qint64 activeFolderId: 0
-    property qint64 selectedMessageId: 0
+    property double activeFolderId: 0
+    property double selectedMessageId: 0
     signal messageSelected(var accountId, var messageId, string senderName, string subject, string snippet)
 
     readonly property var searchOperators: [

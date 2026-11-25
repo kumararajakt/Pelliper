@@ -7,7 +7,7 @@ Rectangle {
     id: sidebar
     color: Kirigami.Theme.alternateBackgroundColor
 
-    property qint64 selectedFolderId: 0
+    property double selectedFolderId: 0
     signal folderSelected(var folderId, string folderName, string folderRole)
 
     ColumnLayout {

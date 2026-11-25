@@ -6,7 +6,7 @@ import org.kde.kirigami as Kirigami
 Item {
     id: viewPane
 
-    property qint64 messageId: 0
+    property double messageId: 0
     property string senderName: ""
     property string subject: ""
     property string bodyText: ""
