@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
-import Qt.labs.platform as Platform
 import org.kde.kirigami as Kirigami
 
 Kirigami.ApplicationWindow {
@@ -12,56 +11,57 @@ Kirigami.ApplicationWindow {
     minimumWidth: 720
     minimumHeight: 480
 
-    Platform.MenuBar {
-        Platform.Menu {
+    menuBar: Controls.MenuBar {
+        Controls.Menu {
             title: i18n("&File")
-            Platform.MenuItem {
+            Controls.MenuItem {
                 text: i18n("&New Message…")
-                shortcut: StandardKey.New
+                icon.name: "mail-message-new"
                 onTriggered: console.log("Compose triggered")
             }
-            Platform.MenuItem {
+            Controls.MenuItem {
                 text: i18n("&Add Account…")
+                icon.name: "list-add-user"
                 onTriggered: {
                     accountSetupDialog.resetWizard()
                     accountSetupDialog.open()
                 }
             }
-            Platform.MenuItem {
+            Controls.MenuItem {
                 text: i18n("&Settings…")
-                shortcut: StandardKey.Preferences
+                icon.name: "configure"
                 onTriggered: settingsDialog.open()
             }
-            Platform.MenuSeparator {}
-            Platform.MenuItem {
+            Controls.MenuSeparator {}
+            Controls.MenuItem {
                 text: i18n("&Quit")
-                shortcut: StandardKey.Quit
+                icon.name: "application-exit"
                 onTriggered: Qt.quit()
             }
         }
 
-        Platform.Menu {
+        Controls.Menu {
             title: i18n("&View")
-            Platform.Menu {
+            Controls.Menu {
                 title: i18n("&Folder Modes")
-                Platform.MenuItemGroup {
+                Controls.ActionGroup {
                     id: folderModeGroup
                 }
-                Platform.MenuItem {
+                Controls.MenuItem {
                     text: i18n("&Unified")
                     checkable: true
                     checked: appSettings.folderMode === "unified"
-                    group: folderModeGroup
+                    Controls.ActionGroup.group: folderModeGroup
                     onTriggered: {
                         appSettings.folderMode = "unified"
                         folderModel.folderMode = "unified"
                     }
                 }
-                Platform.MenuItem {
+                Controls.MenuItem {
                     text: i18n("&All Folders")
                     checkable: true
                     checked: appSettings.folderMode === "all"
-                    group: folderModeGroup
+                    Controls.ActionGroup.group: folderModeGroup
                     onTriggered: {
                         appSettings.folderMode = "all"
                         folderModel.folderMode = "all"
@@ -70,10 +70,11 @@ Kirigami.ApplicationWindow {
             }
         }
 
-        Platform.Menu {
+        Controls.Menu {
             title: i18n("&Help")
-            Platform.MenuItem {
+            Controls.MenuItem {
                 text: i18n("&About Pelliper")
+                icon.name: "help-about"
                 onTriggered: aboutDialog.open()
             }
         }
@@ -81,6 +82,15 @@ Kirigami.ApplicationWindow {
 
     AccountSetupDialog {
         id: accountSetupDialog
+    }
+
+    Shortcut {
+        sequences: [StandardKey.Preferences]
+        onActivated: settingsDialog.open()
+    }
+    Shortcut {
+        sequences: [StandardKey.Quit]
+        onActivated: Qt.quit()
     }
 
     SettingsDialog {
