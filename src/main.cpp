@@ -18,8 +18,22 @@
 #include "models/FolderModel.h"
 #include "models/ThreadListModel.h"
 
+#ifdef HAVE_WEBENGINE
+#include <QtWebEngineQuick/QtWebEngineQuick>
+#include <QWebEngineProfile>
+#include <QWebEngineUrlScheme>
+#include "web/CidSchemeHandler.h"
+#endif
+
 int main(int argc, char *argv[])
 {
+#ifdef HAVE_WEBENGINE
+    QWebEngineUrlScheme cidScheme("pelliper-cid");
+    cidScheme.setSyntax(QWebEngineUrlScheme::Syntax::Path);
+    cidScheme.setFlags(QWebEngineUrlScheme::SecureScheme | QWebEngineUrlScheme::LocalAccessAllowed);
+    QWebEngineUrlScheme::registerScheme(cidScheme);
+    QtWebEngineQuick::initialize();
+#endif
     QApplication app(argc, argv);
     KLocalizedString::setApplicationDomain("pelliper");
 
@@ -64,6 +78,12 @@ int main(int argc, char *argv[])
         Qt::QueuedConnection);
 
     engine.loadFromModule(QStringLiteral("com.pelliper.app"), QStringLiteral("Main"));
+
+#ifdef HAVE_WEBENGINE
+    QWebEngineProfile::defaultProfile()->installUrlSchemeHandler(
+        QByteArrayLiteral("pelliper-cid"),
+        new CidSchemeHandler(&app));
+#endif
 
     auto showMainWindow = [&engine]() {
         const auto objs = engine.rootObjects();

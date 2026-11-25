@@ -51,6 +51,10 @@ target_link_libraries(pelliper PRIVATE
 )
 
 if(Qt6WebEngineQuick_FOUND)
+    target_sources(pelliper PRIVATE
+        web/CidSchemeHandler.h
+        web/CidSchemeHandler.cpp
+    )
     target_link_libraries(pelliper PRIVATE Qt6::WebEngineQuick)
     target_compile_definitions(pelliper PRIVATE HAVE_WEBENGINE=1)
 endif()
