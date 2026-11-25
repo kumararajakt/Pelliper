@@ -19,7 +19,7 @@ public:
     bool showBodyPreview() const;
     void setShowBodyPreview(bool show);
 
-signals:
+Q_SIGNALS:
     void folderModeChanged();
     void showBodyPreviewChanged();
 

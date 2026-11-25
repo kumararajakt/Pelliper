@@ -61,7 +61,7 @@ void FolderModel::setFolderMode(const QString &mode)
         return;
     }
     m_folderMode = normalized;
-    emit folderModeChanged();
+    Q_EMIT folderModeChanged();
     rebuildProjection();
 }
 

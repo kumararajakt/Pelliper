@@ -19,7 +19,7 @@ void AccountController::setBusy(bool b)
         return;
     }
     m_busy = b;
-    emit busyChanged();
+    Q_EMIT busyChanged();
 }
 
 void AccountController::setError(const QString &err)
@@ -28,7 +28,7 @@ void AccountController::setError(const QString &err)
         return;
     }
     m_errorMessage = err;
-    emit errorMessageChanged();
+    Q_EMIT errorMessageChanged();
 }
 
 void AccountController::refreshAccounts()
@@ -73,7 +73,7 @@ void AccountController::onResponse(int id, const QJsonObject &result, const QJso
         m_listReqId = -1;
         if (error.isEmpty()) {
             m_accounts = result.value(QStringLiteral("accounts")).toArray();
-            emit accountsChanged();
+            Q_EMIT accountsChanged();
         }
         return;
     }
@@ -82,7 +82,7 @@ void AccountController::onResponse(int id, const QJsonObject &result, const QJso
         m_autoconfigReqId = -1;
         setBusy(false);
         const bool found = error.isEmpty() && result.value(QStringLiteral("found")).toBool();
-        emit autoconfigCompleted(found, result.value(QStringLiteral("config")).toObject());
+        Q_EMIT autoconfigCompleted(found, result.value(QStringLiteral("config")).toObject());
         return;
     }
 
@@ -92,10 +92,10 @@ void AccountController::onResponse(int id, const QJsonObject &result, const QJso
         if (!error.isEmpty()) {
             const QString msg = error.value(QStringLiteral("message")).toString(QStringLiteral("Connection failed"));
             setError(msg);
-            emit accountVerifyFailed(msg);
+            Q_EMIT accountVerifyFailed(msg);
         } else {
             refreshAccounts();
-            emit accountAdded(result.value(QStringLiteral("account")).toObject());
+            Q_EMIT accountAdded(result.value(QStringLiteral("account")).toObject());
         }
     }
 }

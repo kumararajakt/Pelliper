@@ -27,7 +27,7 @@ public:
     Q_INVOKABLE void clearAccountCache(qint64 accountId);
     Q_INVOKABLE void removeAccount(qint64 accountId);
 
-signals:
+Q_SIGNALS:
     void busyChanged();
     void errorMessageChanged();
     void accountsChanged();
@@ -35,7 +35,7 @@ signals:
     void accountAdded(const QJsonObject &account);
     void accountVerifyFailed(const QString &error);
 
-private slots:
+private Q_SLOTS:
     void onResponse(int id, const QJsonObject &result, const QJsonObject &error);
 
 private:

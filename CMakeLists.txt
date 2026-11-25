@@ -1,11 +1,17 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.20)
 project(pelliper VERSION 0.1.0 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_AUTOMOC ON)
+find_package(ECM 6.0.0 REQUIRED NO_MODULE)
+set(CMAKE_MODULE_PATH ${ECM_MODULE_PATH})
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS
+include(KDEInstallDirs)
+include(KDECMakeSettings)
+include(KDECompilerSettings NO_POLICY_SCOPE)
+include(ECMFindQmlModule)
+include(ECMQmlModule)
+include(FeatureSummary)
+
+find_package(Qt6 REQUIRED COMPONENTS
     Core
     Gui
     Widgets
@@ -16,56 +22,18 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS
 )
 
 find_package(Qt6 COMPONENTS WebEngineQuick QUIET)
-find_package(KF6Kirigami REQUIRED)
-find_package(KF6CoreAddons REQUIRED)
-find_package(KF6I18n REQUIRED)
-find_package(KF6IconThemes REQUIRED)
-find_package(KF6QQC2DesktopStyle REQUIRED)
 
-qt_add_executable(pelliper
-    src/main.cpp
-    src/app/AppSettings.h
-    src/app/AppSettings.cpp
-    src/app/AccountController.h
-    src/app/AccountController.cpp
-    src/ipc/DaemonClient.h
-    src/ipc/DaemonClient.cpp
-    src/models/FolderModel.h
-    src/models/FolderModel.cpp
-    src/models/ThreadListModel.h
-    src/models/ThreadListModel.cpp
+find_package(KF6 REQUIRED COMPONENTS
+    Kirigami
+    I18n
+    CoreAddons
+    IconThemes
+    QQC2DesktopStyle
 )
 
-qt_add_qml_module(pelliper
-    URI com.pelliper.app
-    VERSION 1.0
-    QML_FILES
-        src/qml/Main.qml
-        src/qml/components/FolderSidebar.qml
-        src/qml/components/MessageListPane.qml
-        src/qml/components/MessageViewPane.qml
-        src/qml/dialogs/AccountSetupDialog.qml
-        src/qml/dialogs/SettingsDialog.qml
-)
+ecm_find_qmlmodule(org.kde.kirigami REQUIRED)
 
-target_link_libraries(pelliper PRIVATE
-    Qt6::Core
-    Qt6::Gui
-    Qt6::Widgets
-    Qt6::Qml
-    Qt6::Quick
-    Qt6::QuickControls2
-    Qt6::Network
-    KF6::Kirigami
-    KF6::CoreAddons
-    KF6::I18n
-    KF6::IconThemes
-)
-
-if(Qt6WebEngineQuick_FOUND)
-    target_link_libraries(pelliper PRIVATE Qt6::WebEngineQuick)
-    target_compile_definitions(pelliper PRIVATE HAVE_WEBENGINE=1)
-endif()
+add_subdirectory(src)
 
 # Optional convenience target to build the Rust daemon submodule
 find_program(CARGO_EXECUTABLE cargo)
@@ -77,6 +45,7 @@ if(CARGO_EXECUTABLE AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/daemon/Cargo.toml")
     )
 endif()
 
-install(TARGETS pelliper DESTINATION bin)
-install(FILES packaging/com.pelliper.Pelliper.desktop DESTINATION share/applications)
-install(FILES packaging/com.pelliper.Pelliper.metainfo.xml DESTINATION share/metainfo)
+install(PROGRAMS packaging/com.pelliper.Pelliper.desktop DESTINATION ${KDE_INSTALL_APPDIR})
+install(FILES packaging/com.pelliper.Pelliper.metainfo.xml DESTINATION ${KDE_INSTALL_METAINFODIR})
+
+feature_summary(WHAT ALL INCLUDE_QUIET_PACKAGES FATAL_ON_MISSING_REQUIRED_PACKAGES)

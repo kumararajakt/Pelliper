@@ -139,7 +139,7 @@ void ThreadListModel::onNotification(const QString &method, const QJsonObject &p
                 m_items[i].snippet = snippet;
                 m_items[i].bodySynced = true;
                 const QModelIndex idx = index(i);
-                emit dataChanged(idx, idx, { SnippetRole, BodySyncedRole });
+                Q_EMIT dataChanged(idx, idx, { SnippetRole, BodySyncedRole });
                 break;
             }
         }

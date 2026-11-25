@@ -51,7 +51,7 @@ public:
     Q_INVOKABLE void requestBody(qint64 accountId, qint64 messageId);
     Q_INVOKABLE void prefetchRange(int firstRow, int lastRow);
 
-private slots:
+private Q_SLOTS:
     void onResponse(int id, const QJsonObject &result, const QJsonObject &error);
     void onNotification(const QString &method, const QJsonObject &params);
 

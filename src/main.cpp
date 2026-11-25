@@ -7,7 +7,7 @@
 #include <QSystemTrayIcon>
 #include <QWindow>
 
-#include <KLocalizedContext>
+#include <KLocalizedQmlContext>
 #include <KLocalizedString>
 
 #include "app/AccountController.h"
@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
     daemonClient.connectToDaemon();
 
     QQmlApplicationEngine engine;
-    engine.rootContext()->setContextObject(new KLocalizedContext(&engine));
+    engine.rootContext()->setContextObject(new KLocalizedQmlContext(&engine));
     engine.rootContext()->setContextProperty(QStringLiteral("appSettings"), &appSettings);
     engine.rootContext()->setContextProperty(QStringLiteral("daemonClient"), &daemonClient);
     engine.rootContext()->setContextProperty(QStringLiteral("accountController"), &accountController);

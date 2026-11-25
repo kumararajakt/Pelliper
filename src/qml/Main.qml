@@ -4,9 +4,6 @@ import QtQuick.Layouts
 import Qt.labs.platform as Platform
 import org.kde.kirigami as Kirigami
 
-import "components"
-import "dialogs"
-
 Kirigami.ApplicationWindow {
     id: root
     title: i18n("Pelliper")

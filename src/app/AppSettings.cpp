@@ -17,7 +17,7 @@ void AppSettings::setFolderMode(const QString &mode)
         return;
     }
     m_settings.setValue(QStringLiteral("ui/folderMode"), normalized);
-    emit folderModeChanged();
+    Q_EMIT folderModeChanged();
 }
 
 bool AppSettings::showBodyPreview() const
@@ -31,5 +31,5 @@ void AppSettings::setShowBodyPreview(bool show)
         return;
     }
     m_settings.setValue(QStringLiteral("ui/showBodyPreview"), show);
-    emit showBodyPreviewChanged();
+    Q_EMIT showBodyPreviewChanged();
 }

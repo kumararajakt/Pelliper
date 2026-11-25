@@ -48,10 +48,10 @@ public:
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void markFolderRead(qint64 folderId);
 
-signals:
+Q_SIGNALS:
     void folderModeChanged();
 
-private slots:
+private Q_SLOTS:
     void onResponse(int id, const QJsonObject &result, const QJsonObject &error);
     void onNotification(const QString &method, const QJsonObject &params);
 

@@ -20,13 +20,13 @@ public:
     Q_INVOKABLE void connectToDaemon();
     Q_INVOKABLE int sendRequest(const QString &method, const QJsonObject &params = {});
 
-signals:
+Q_SIGNALS:
     void connectedChanged();
     void statusTextChanged();
     void responseReceived(int id, const QJsonObject &result, const QJsonObject &error);
     void notificationReceived(const QString &method, const QJsonObject &params);
 
-private slots:
+private Q_SLOTS:
     void onConnected();
     void onDisconnected();
     void onReadyRead();

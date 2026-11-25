@@ -41,7 +41,7 @@ void DaemonClient::connectToDaemon()
     }
 
     m_statusText = QStringLiteral("Connecting…");
-    emit statusTextChanged();
+    Q_EMIT statusTextChanged();
     m_socket->connectToServer(socketPath());
 }
 
@@ -69,8 +69,8 @@ void DaemonClient::onConnected()
     m_connected = true;
     m_spawnAttempted = false;
     m_statusText = QStringLiteral("Connected");
-    emit connectedChanged();
-    emit statusTextChanged();
+    Q_EMIT connectedChanged();
+    Q_EMIT statusTextChanged();
     sendRequest(QStringLiteral("daemon.status"));
 }
 
@@ -78,10 +78,10 @@ void DaemonClient::onDisconnected()
 {
     if (m_connected) {
         m_connected = false;
-        emit connectedChanged();
+        Q_EMIT connectedChanged();
     }
     m_statusText = QStringLiteral("Disconnected");
-    emit statusTextChanged();
+    Q_EMIT statusTextChanged();
 
     QTimer::singleShot(2000, this, &DaemonClient::connectToDaemon);
 }
@@ -93,7 +93,7 @@ void DaemonClient::onErrorOccurred(QLocalSocket::LocalSocketError)
         trySpawnDaemon();
     }
     m_statusText = QStringLiteral("Daemon offline");
-    emit statusTextChanged();
+    Q_EMIT statusTextChanged();
     QTimer::singleShot(1500, this, &DaemonClient::connectToDaemon);
 }
 
@@ -132,12 +132,12 @@ void DaemonClient::onReadyRead()
         }
         const QJsonObject obj = doc.object();
         if (obj.contains(QStringLiteral("id"))) {
-            emit responseReceived(
+            Q_EMIT responseReceived(
                 obj.value(QStringLiteral("id")).toInt(),
                 obj.value(QStringLiteral("result")).toObject(),
                 obj.value(QStringLiteral("error")).toObject());
         } else if (obj.contains(QStringLiteral("method"))) {
-            emit notificationReceived(
+            Q_EMIT notificationReceived(
                 obj.value(QStringLiteral("method")).toString(),
                 obj.value(QStringLiteral("params")).toObject());
         }
