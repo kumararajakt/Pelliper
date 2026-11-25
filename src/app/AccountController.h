@@ -4,6 +4,7 @@
 #include <QJsonObject>
 #include <QObject>
 #include <QString>
+#include <QVariantList>
 
 class DaemonClient;
 
@@ -13,6 +14,7 @@ class AccountController : public QObject
     Q_PROPERTY(bool busy READ busy NOTIFY busyChanged)
     Q_PROPERTY(QString errorMessage READ errorMessage NOTIFY errorMessageChanged)
     Q_PROPERTY(int accountCount READ accountCount NOTIFY accountsChanged)
+    Q_PROPERTY(QVariantList accounts READ accounts NOTIFY accountsChanged)
 
 public:
     explicit AccountController(DaemonClient *client, QObject *parent = nullptr);
@@ -20,11 +22,17 @@ public:
     bool busy() const { return m_busy; }
     QString errorMessage() const { return m_errorMessage; }
     int accountCount() const { return m_accounts.size(); }
+    QVariantList accounts() const;
 
     Q_INVOKABLE void refreshAccounts();
     Q_INVOKABLE void lookupAutoconfig(const QString &email);
     Q_INVOKABLE void startOAuth(const QString &provider, const QString &email);
     Q_INVOKABLE void testAndAddAccount(const QJsonObject &params);
+    Q_INVOKABLE void updateAccount(qint64 accountId,
+                                   const QString &displayName,
+                                   int syncIntervalSecs,
+                                   const QString &signature,
+                                   bool enabled);
     Q_INVOKABLE void clearAccountCache(qint64 accountId);
     Q_INVOKABLE void removeAccount(qint64 accountId);
 

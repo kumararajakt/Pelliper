@@ -37,6 +37,16 @@ void AccountController::refreshAccounts()
     m_listReqId = m_client->sendRequest(QStringLiteral("account.list"));
 }
 
+QVariantList AccountController::accounts() const
+{
+    QVariantList out;
+    out.reserve(m_accounts.size());
+    for (const auto &v : m_accounts) {
+        out.append(v.toObject().toVariantMap());
+    }
+    return out;
+}
+
 void AccountController::lookupAutoconfig(const QString &email)
 {
     setError({});
@@ -60,6 +70,22 @@ void AccountController::testAndAddAccount(const QJsonObject &params)
     setError({});
     setBusy(true);
     m_addReqId = m_client->sendRequest(QStringLiteral("account.test_and_add"), params);
+}
+
+void AccountController::updateAccount(qint64 accountId,
+                                      const QString &displayName,
+                                      int syncIntervalSecs,
+                                      const QString &signature,
+                                      bool enabled)
+{
+    QJsonObject params;
+    params.insert(QStringLiteral("account_id"), accountId);
+    params.insert(QStringLiteral("display_name"), displayName);
+    params.insert(QStringLiteral("sync_interval_secs"), syncIntervalSecs);
+    params.insert(QStringLiteral("signature"), signature);
+    params.insert(QStringLiteral("enabled"), enabled);
+    m_client->sendRequest(QStringLiteral("account.update"), params);
+    refreshAccounts();
 }
 
 void AccountController::clearAccountCache(qint64 accountId)
