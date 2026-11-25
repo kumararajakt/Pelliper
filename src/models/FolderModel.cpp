@@ -80,6 +80,48 @@ void FolderModel::markFolderRead(qint64 folderId)
     m_client->sendRequest(QStringLiteral("folder.mark_all_read"), params);
 }
 
+void FolderModel::createFolder(qint64 accountId, const QString &fullPath)
+{
+    if (accountId <= 0 || fullPath.trimmed().isEmpty()) {
+        return;
+    }
+    QJsonObject params;
+    params.insert(QStringLiteral("account_id"), accountId);
+    params.insert(QStringLiteral("full_path"), fullPath.trimmed());
+    m_client->sendRequest(QStringLiteral("folder.create"), params);
+}
+
+void FolderModel::renameFolder(qint64 folderId, const QString &newPath)
+{
+    if (folderId <= 0 || newPath.trimmed().isEmpty()) {
+        return;
+    }
+    QJsonObject params;
+    params.insert(QStringLiteral("folder_id"), folderId);
+    params.insert(QStringLiteral("new_path"), newPath.trimmed());
+    m_client->sendRequest(QStringLiteral("folder.rename"), params);
+}
+
+void FolderModel::deleteFolder(qint64 folderId)
+{
+    if (folderId <= 0) {
+        return;
+    }
+    QJsonObject params;
+    params.insert(QStringLiteral("folder_id"), folderId);
+    m_client->sendRequest(QStringLiteral("folder.delete"), params);
+}
+
+void FolderModel::emptyFolder(qint64 folderId)
+{
+    if (folderId <= 0) {
+        return;
+    }
+    QJsonObject params;
+    params.insert(QStringLiteral("folder_id"), folderId);
+    m_client->sendRequest(QStringLiteral("folder.empty"), params);
+}
+
 void FolderModel::onResponse(int id, const QJsonObject &result, const QJsonObject &error)
 {
     if (id == m_listReqId) {

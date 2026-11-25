@@ -47,6 +47,10 @@ public:
 
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void markFolderRead(qint64 folderId);
+    Q_INVOKABLE void createFolder(qint64 accountId, const QString &fullPath);
+    Q_INVOKABLE void renameFolder(qint64 folderId, const QString &newPath);
+    Q_INVOKABLE void deleteFolder(qint64 folderId);
+    Q_INVOKABLE void emptyFolder(qint64 folderId);
 
 Q_SIGNALS:
     void folderModeChanged();

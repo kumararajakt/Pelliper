@@ -8,7 +8,28 @@ Rectangle {
     color: Kirigami.Theme.alternateBackgroundColor
 
     property double selectedFolderId: 0
+    property double dialogTargetId: 0
+    property string dialogMode: "" // "create" | "rename"
     signal folderSelected(var folderId, string folderName, string folderRole)
+
+    Kirigami.Dialog {
+        id: folderNameDialog
+        title: sidebar.dialogMode === "rename" ? i18n("Rename Folder") : i18n("New Folder")
+        standardButtons: Kirigami.Dialog.Ok | Kirigami.Dialog.Cancel
+        padding: Kirigami.Units.largeSpacing
+        onAccepted: {
+            if (sidebar.dialogMode === "rename") {
+                folderModel.renameFolder(sidebar.dialogTargetId, folderNameInput.text)
+            } else {
+                folderModel.createFolder(sidebar.dialogTargetId, folderNameInput.text)
+            }
+        }
+        Controls.TextField {
+            id: folderNameInput
+            width: 280
+            placeholderText: i18n("Folder name (e.g. Work/Receipts)")
+        }
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -62,6 +83,38 @@ Rectangle {
                         text: i18n("Mark Folder as Read")
                         enabled: model.folderId > 0
                         onTriggered: folderModel.markFolderRead(model.folderId)
+                    }
+                    Controls.MenuSeparator {}
+                    Controls.MenuItem {
+                        text: i18n("New Folder…")
+                        enabled: model.accountId > 0
+                        onTriggered: {
+                            sidebar.dialogMode = "create"
+                            sidebar.dialogTargetId = model.accountId
+                            folderNameInput.text = ""
+                            folderNameDialog.open()
+                        }
+                    }
+                    Controls.MenuItem {
+                        text: i18n("Rename Folder…")
+                        enabled: model.folderId > 0 && model.folderRole === "custom"
+                        onTriggered: {
+                            sidebar.dialogMode = "rename"
+                            sidebar.dialogTargetId = model.folderId
+                            folderNameInput.text = model.name
+                            folderNameDialog.open()
+                        }
+                    }
+                    Controls.MenuItem {
+                        text: i18n("Delete Folder")
+                        enabled: model.folderId > 0 && model.folderRole === "custom"
+                        onTriggered: folderModel.deleteFolder(model.folderId)
+                    }
+                    Controls.MenuItem {
+                        visible: model.folderRole === "trash" || model.folderRole === "spam"
+                        text: model.folderRole === "trash" ? i18n("Empty Trash") : i18n("Empty Spam")
+                        enabled: model.folderId > 0
+                        onTriggered: folderModel.emptyFolder(model.folderId)
                     }
                 }
 
