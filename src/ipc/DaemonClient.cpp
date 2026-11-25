@@ -99,13 +99,9 @@ void DaemonClient::onErrorOccurred(QLocalSocket::LocalSocketError)
 
 void DaemonClient::trySpawnDaemon()
 {
-    QString bin = QStandardPaths::findExecutable(QStringLiteral("pelliper-daemon"));
+    QString bin = qEnvironmentVariable("PELLIPER_DAEMON_BIN");
     if (bin.isEmpty()) {
-        const QString devPath = QCoreApplication::applicationDirPath()
-            + QStringLiteral("/../daemon/target/debug/pelliper-daemon");
-        if (QFileInfo::exists(devPath)) {
-            bin = devPath;
-        }
+        bin = QStandardPaths::findExecutable(QStringLiteral("pelliper-daemon"));
     }
     if (!bin.isEmpty()) {
         QProcess::startDetached(bin, {});
