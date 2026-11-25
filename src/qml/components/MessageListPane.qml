@@ -11,6 +11,10 @@ ColumnLayout {
     property double selectedMessageId: 0
     signal messageSelected(var accountId, var messageId, string senderName, string subject, string snippet)
 
+    function focusSearch() {
+        searchField.forceActiveFocus()
+    }
+
     readonly property var searchOperators: [
         { op: "from:", hint: i18n("an email address") },
         { op: "to:", hint: i18n("an email address") },

@@ -1,0 +1,8 @@
+[Global]
+IconName=mail-client
+Comment=Pelliper Email Client
+
+[Event/new-mail]
+Name=New Email
+Comment=A new email message has arrived
+Action=Popup

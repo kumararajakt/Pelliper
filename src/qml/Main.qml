@@ -11,6 +11,20 @@ Kirigami.ApplicationWindow {
     minimumWidth: 720
     minimumHeight: 480
 
+    function openComposer() {
+        composerDialog.openCompose(messageController.accountId)
+    }
+
+    function isTextInputFocused() {
+        const item = activeFocusItem
+        return item && (item.toString().indexOf("TextField") >= 0 || item.toString().indexOf("TextArea") >= 0 || item.toString().indexOf("SearchField") >= 0)
+    }
+
+    onClosing: (close) => {
+        close.accepted = false
+        root.hide()
+    }
+
     menuBar: Controls.MenuBar {
         Controls.Menu {
             title: i18n("&File")
@@ -104,6 +118,67 @@ Kirigami.ApplicationWindow {
     Shortcut {
         sequences: [StandardKey.New]
         onActivated: composerDialog.openCompose(messageController.accountId)
+    }
+    Shortcut {
+        sequence: "c"
+        enabled: !root.isTextInputFocused()
+        onActivated: composerDialog.openCompose(messageController.accountId)
+    }
+    Shortcut {
+        sequence: "r"
+        enabled: !root.isTextInputFocused() && messageController.messageId > 0
+        onActivated: messageViewPane.replyRequested()
+    }
+    Shortcut {
+        sequence: "a"
+        enabled: !root.isTextInputFocused() && messageController.messageId > 0
+        onActivated: messageViewPane.replyAllRequested()
+    }
+    Shortcut {
+        sequence: "f"
+        enabled: !root.isTextInputFocused() && messageController.messageId > 0
+        onActivated: messageViewPane.forwardRequested()
+    }
+    Shortcut {
+        sequence: "s"
+        enabled: !root.isTextInputFocused() && messageController.messageId > 0
+        onActivated: {
+            const nextStar = !messageController.starred
+            messageController.toggleStar(messageController.messageId, nextStar)
+            threadListModel.updateFlagsOptimistic(messageController.messageId, messageController.unread, nextStar)
+        }
+    }
+    Shortcut {
+        sequence: "u"
+        enabled: !root.isTextInputFocused() && messageController.messageId > 0
+        onActivated: {
+            const markRead = messageController.unread
+            messageController.toggleRead(messageController.messageId, markRead)
+            threadListModel.updateFlagsOptimistic(messageController.messageId, !markRead, messageController.starred)
+        }
+    }
+    Shortcut {
+        sequence: "e"
+        enabled: !root.isTextInputFocused() && messageController.messageId > 0
+        onActivated: {
+            const id = messageController.messageId
+            messageController.archiveMessage(id)
+            threadListModel.removeMessageOptimistic(id)
+        }
+    }
+    Shortcut {
+        sequences: ["Delete", "#"]
+        enabled: !root.isTextInputFocused() && messageController.messageId > 0
+        onActivated: {
+            const id = messageController.messageId
+            messageController.deleteMessage(id)
+            threadListModel.removeMessageOptimistic(id)
+        }
+    }
+    Shortcut {
+        sequence: "/"
+        enabled: !root.isTextInputFocused()
+        onActivated: messageListPane.focusSearch()
     }
 
     Shortcut {

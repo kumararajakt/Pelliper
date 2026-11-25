@@ -13,6 +13,8 @@ target_sources(pelliper PRIVATE
     app/AccountController.cpp
     app/MessageController.h
     app/MessageController.cpp
+    app/NotificationService.h
+    app/NotificationService.cpp
     ipc/DaemonClient.h
     ipc/DaemonClient.cpp
     models/FolderModel.h
@@ -45,6 +47,7 @@ target_link_libraries(pelliper PRIVATE
     KF6::I18nQml
     KF6::CoreAddons
     KF6::IconThemes
+    KF6::Notifications
 )
 
 if(Qt6WebEngineQuick_FOUND)

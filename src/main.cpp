@@ -13,6 +13,7 @@
 #include "app/AccountController.h"
 #include "app/AppSettings.h"
 #include "app/MessageController.h"
+#include "app/NotificationService.h"
 #include "ipc/DaemonClient.h"
 #include "models/FolderModel.h"
 #include "models/ThreadListModel.h"
@@ -35,6 +36,7 @@ int main(int argc, char *argv[])
     DaemonClient daemonClient;
     AccountController accountController(&daemonClient);
     MessageController messageController(&daemonClient);
+    NotificationService notificationService(&daemonClient);
     FolderModel folderModel(&daemonClient);
     folderModel.setFolderMode(appSettings.folderMode());
     ThreadListModel threadListModel(&daemonClient);
@@ -63,23 +65,37 @@ int main(int argc, char *argv[])
 
     engine.loadFromModule(QStringLiteral("com.pelliper.app"), QStringLiteral("Main"));
 
+    auto showMainWindow = [&engine]() {
+        const auto objs = engine.rootObjects();
+        if (!objs.isEmpty()) {
+            if (auto *win = qobject_cast<QWindow *>(objs.first())) {
+                win->show();
+                win->raise();
+                win->requestActivate();
+            }
+        }
+    };
+
+    QObject::connect(&notificationService, &NotificationService::openWindowRequested, &app, showMainWindow);
+
     // Always-enabled System Tray Icon
     if (QSystemTrayIcon::isSystemTrayAvailable()) {
+        app.setQuitOnLastWindowClosed(false);
         auto *tray = new QSystemTrayIcon(QIcon::fromTheme(QStringLiteral("mail-client")), &app);
         tray->setToolTip(QStringLiteral("Pelliper"));
 
         auto *trayMenu = new QMenu();
         auto *openAction = trayMenu->addAction(QStringLiteral("Open Pelliper"));
+        auto *composeAction = trayMenu->addAction(QStringLiteral("New Message…"));
+        trayMenu->addSeparator();
         auto *quitAction = trayMenu->addAction(QStringLiteral("Quit"));
 
-        QObject::connect(openAction, &QAction::triggered, &app, [&engine]() {
+        QObject::connect(openAction, &QAction::triggered, &app, showMainWindow);
+        QObject::connect(composeAction, &QAction::triggered, &app, [&engine, showMainWindow]() {
+            showMainWindow();
             const auto objs = engine.rootObjects();
             if (!objs.isEmpty()) {
-                if (auto *win = qobject_cast<QWindow *>(objs.first())) {
-                    win->show();
-                    win->raise();
-                    win->requestActivate();
-                }
+                QMetaObject::invokeMethod(objs.first(), "openComposer");
             }
         });
         QObject::connect(quitAction, &QAction::triggered, &app, &QCoreApplication::quit);

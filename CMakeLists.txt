@@ -28,6 +28,7 @@ find_package(KF6 REQUIRED COMPONENTS
     I18n
     CoreAddons
     IconThemes
+    Notifications
     QQC2DesktopStyle
 )
 
@@ -47,5 +48,6 @@ endif()
 
 install(PROGRAMS packaging/com.pelliper.Pelliper.desktop DESTINATION ${KDE_INSTALL_APPDIR})
 install(FILES packaging/com.pelliper.Pelliper.metainfo.xml DESTINATION ${KDE_INSTALL_METAINFODIR})
+install(FILES packaging/com.pelliper.Pelliper.notifyrc DESTINATION ${KDE_INSTALL_KNOTIFYRCDIR})
 
 feature_summary(WHAT ALL INCLUDE_QUIET_PACKAGES FATAL_ON_MISSING_REQUIRED_PACKAGES)

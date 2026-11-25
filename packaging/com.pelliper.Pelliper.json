@@ -1,0 +1,43 @@
+{
+  "app-id": "com.pelliper.Pelliper",
+  "runtime": "org.kde.Platform",
+  "runtime-version": "6.8",
+  "sdk": "org.kde.Sdk",
+  "sdk-extensions": [
+    "org.freedesktop.Sdk.Extension.rust-stable"
+  ],
+  "command": "pelliper",
+  "finish-args": [
+    "--share=ipc",
+    "--share=network",
+    "--socket=wayland",
+    "--socket=fallback-x11",
+    "--device=dri",
+    "--talk-name=org.freedesktop.secrets",
+    "--talk-name=org.freedesktop.Notifications",
+    "--talk-name=org.kde.StatusNotifierWatcher"
+  ],
+  "build-options": {
+    "append-path": "/usr/lib/sdk/rust-stable/bin"
+  },
+  "modules": [
+    {
+      "name": "pelliper-daemon",
+      "buildsystem": "simple",
+      "build-commands": [
+        "cargo build --release --manifest-path daemon/Cargo.toml",
+        "install -Dm755 daemon/target/release/pelliper-daemon /app/bin/pelliper-daemon"
+      ],
+      "sources": [
+        { "type": "dir", "path": ".." }
+      ]
+    },
+    {
+      "name": "pelliper",
+      "buildsystem": "cmake-ninja",
+      "sources": [
+        { "type": "dir", "path": ".." }
+      ]
+    }
+  ]
+}
