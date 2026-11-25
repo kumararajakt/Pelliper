@@ -13,18 +13,61 @@ Kirigami.Dialog {
     standardButtons: Kirigami.Dialog.NoButton
 
     property double accountId: 1
+    property double draftId: 0
+    property bool dirty: false
+    property string draftStatusText: ""
     property var attachmentsList: []
     property bool showCcBcc: false
 
+    function signatureForAccount(accId) {
+        const list = accountController.accounts
+        for (let i = 0; i < list.length; ++i) {
+            if (list[i].id === accId && list[i].signature && list[i].signature.length > 0) {
+                return "\n\n-- \n" + list[i].signature
+            }
+        }
+        return ""
+    }
+
+    Timer {
+        id: draftAutoSaveTimer
+        interval: 5000
+        onTriggered: {
+            if (composer.opened && composer.dirty) {
+                composer.dirty = false
+                messageController.saveDraft(
+                    composer.draftId,
+                    composer.accountId,
+                    toField.text.trim(),
+                    ccField.text.trim(),
+                    bccField.text.trim(),
+                    subjectField.text,
+                    bodyArea.text
+                )
+            }
+        }
+    }
+
+    Connections {
+        target: messageController
+        function onDraftSaved(id) {
+            composer.draftId = id
+            composer.draftStatusText = i18n("Draft saved")
+        }
+    }
+
     function openCompose(accId) {
         accountId = accId > 0 ? accId : 1
+        draftId = 0
+        dirty = false
+        draftStatusText = ""
         title = i18n("New Message")
         toField.text = ""
         ccField.text = ""
         bccField.text = ""
         showCcBcc = false
         subjectField.text = ""
-        bodyArea.text = ""
+        bodyArea.text = signatureForAccount(accountId)
         attachmentsList = []
         open()
         toField.forceActiveFocus()
@@ -32,13 +75,16 @@ Kirigami.Dialog {
 
     function openReply(accId, senderAddr, senderName, subj, dateStr, origBody) {
         accountId = accId > 0 ? accId : 1
+        draftId = 0
+        dirty = false
+        draftStatusText = ""
         title = i18n("Reply")
         toField.text = senderAddr
         ccField.text = ""
         bccField.text = ""
         showCcBcc = false
         subjectField.text = subj.toLowerCase().startsWith("re:") ? subj : ("Re: " + subj)
-        bodyArea.text = "\n\nOn " + dateStr + ", " + senderName + " wrote:\n> " + origBody.replace(/\n/g, "\n> ")
+        bodyArea.text = signatureForAccount(accountId) + "\n\nOn " + dateStr + ", " + senderName + " wrote:\n> " + origBody.replace(/\n/g, "\n> ")
         attachmentsList = []
         open()
         bodyArea.cursorPosition = 0
@@ -56,13 +102,17 @@ Kirigami.Dialog {
 
     function openForward(accId, senderName, toStr, subj, dateStr, origBody, origAttachments) {
         accountId = accId > 0 ? accId : 1
+        draftId = 0
+        dirty = false
+        draftStatusText = ""
         title = i18n("Forward")
         toField.text = ""
         ccField.text = ""
         bccField.text = ""
         showCcBcc = false
         subjectField.text = subj.toLowerCase().startsWith("fwd:") ? subj : ("Fwd: " + subj)
-        bodyArea.text = "\n\n---------- Forwarded message ---------\n"
+        bodyArea.text = signatureForAccount(accountId)
+            + "\n\n---------- Forwarded message ---------\n"
             + "From: " + senderName + "\n"
             + "Date: " + dateStr + "\n"
             + "Subject: " + subj + "\n"
@@ -126,6 +176,7 @@ Kirigami.Dialog {
                 id: subjectField
                 Layout.fillWidth: true
                 placeholderText: i18n("Subject")
+                onTextChanged: { composer.dirty = true; draftAutoSaveTimer.restart() }
             }
         }
 
@@ -154,6 +205,7 @@ Kirigami.Dialog {
                 id: bodyArea
                 wrapMode: TextEdit.Wrap
                 placeholderText: i18n("Write your message…")
+                onTextChanged: { composer.dirty = true; draftAutoSaveTimer.restart() }
             }
         }
 
@@ -164,10 +216,19 @@ Kirigami.Dialog {
                 text: i18n("Attach…")
                 onClicked: filePicker.open()
             }
+            Controls.Label {
+                text: composer.draftStatusText
+                opacity: 0.65
+                font.pointSize: Kirigami.Theme.smallFont.pointSize
+            }
             Item { Layout.fillWidth: true }
             Controls.Button {
                 text: i18n("Discard")
-                onClicked: composer.close()
+                onClicked: {
+                    draftAutoSaveTimer.stop()
+                    messageController.discardDraft(composer.draftId)
+                    composer.close()
+                }
             }
             Controls.Button {
                 highlighted: true
@@ -175,6 +236,8 @@ Kirigami.Dialog {
                 text: i18n("Send")
                 enabled: toField.text.trim().length > 0
                 onClicked: {
+                    draftAutoSaveTimer.stop()
+                    messageController.discardDraft(composer.draftId)
                     messageController.sendMessage(
                         composer.accountId,
                         toField.text.trim(),

@@ -61,6 +61,14 @@ public:
     Q_INVOKABLE void openAttachment(qint64 attachmentId);
     Q_INVOKABLE void saveAttachmentAs(qint64 attachmentId, const QUrl &destFileUrl);
     Q_INVOKABLE void saveAllAttachments(const QUrl &destDirUrl);
+    Q_INVOKABLE void saveDraft(qint64 draftId,
+                               qint64 accountId,
+                               const QString &to,
+                               const QString &cc,
+                               const QString &bcc,
+                               const QString &subject,
+                               const QString &body);
+    Q_INVOKABLE void discardDraft(qint64 draftId);
 
 Q_SIGNALS:
     void messageChanged();
@@ -68,6 +76,7 @@ Q_SIGNALS:
     void outboxStatus(const QString &status, const QString &error);
     void attachmentSaved(const QString &path);
     void attachmentError(const QString &error);
+    void draftSaved(qint64 draftId);
 
 private Q_SLOTS:
     void onResponse(int id, const QJsonObject &result, const QJsonObject &error);
@@ -79,6 +88,7 @@ private:
 
     DaemonClient *m_client = nullptr;
     int m_getReqId = -1;
+    int m_draftSaveReqId = -1;
     QHash<int, QString> m_pendingAttAction; // reqId -> "open" | destFilePath
 
     qint64 m_messageId = 0;

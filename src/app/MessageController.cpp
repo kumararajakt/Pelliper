@@ -143,8 +143,46 @@ void MessageController::saveAllAttachments(const QUrl &destDirUrl)
     }
 }
 
+void MessageController::saveDraft(qint64 draftId,
+                                  qint64 accountId,
+                                  const QString &to,
+                                  const QString &cc,
+                                  const QString &bcc,
+                                  const QString &subject,
+                                  const QString &body)
+{
+    QJsonObject params;
+    if (draftId > 0) {
+        params.insert(QStringLiteral("draft_id"), draftId);
+    }
+    params.insert(QStringLiteral("account_id"), accountId);
+    params.insert(QStringLiteral("to"), to);
+    params.insert(QStringLiteral("cc"), cc);
+    params.insert(QStringLiteral("bcc"), bcc);
+    params.insert(QStringLiteral("subject"), subject);
+    params.insert(QStringLiteral("body"), body);
+    m_draftSaveReqId = m_client->sendRequest(QStringLiteral("draft.save"), params);
+}
+
+void MessageController::discardDraft(qint64 draftId)
+{
+    if (draftId <= 0) {
+        return;
+    }
+    QJsonObject params;
+    params.insert(QStringLiteral("draft_id"), draftId);
+    m_client->sendRequest(QStringLiteral("draft.discard"), params);
+}
+
 void MessageController::onResponse(int id, const QJsonObject &result, const QJsonObject &error)
 {
+    if (id == m_draftSaveReqId) {
+        m_draftSaveReqId = -1;
+        if (error.isEmpty()) {
+            Q_EMIT draftSaved(result.value(QStringLiteral("draft_id")).toInteger());
+        }
+        return;
+    }
     if (m_pendingAttAction.contains(id)) {
         const QString action = m_pendingAttAction.take(id);
         if (!error.isEmpty()) {
