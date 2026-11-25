@@ -24,8 +24,16 @@ find_package(KF6QQC2DesktopStyle REQUIRED)
 
 qt_add_executable(pelliper
     src/main.cpp
+    src/app/AppSettings.h
+    src/app/AppSettings.cpp
+    src/app/AccountController.h
+    src/app/AccountController.cpp
     src/ipc/DaemonClient.h
     src/ipc/DaemonClient.cpp
+    src/models/FolderModel.h
+    src/models/FolderModel.cpp
+    src/models/ThreadListModel.h
+    src/models/ThreadListModel.cpp
 )
 
 qt_add_qml_module(pelliper
@@ -33,6 +41,11 @@ qt_add_qml_module(pelliper
     VERSION 1.0
     QML_FILES
         src/qml/Main.qml
+        src/qml/components/FolderSidebar.qml
+        src/qml/components/MessageListPane.qml
+        src/qml/components/MessageViewPane.qml
+        src/qml/dialogs/AccountSetupDialog.qml
+        src/qml/dialogs/SettingsDialog.qml
 )
 
 target_link_libraries(pelliper PRIVATE

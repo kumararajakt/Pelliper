@@ -45,21 +45,23 @@ void DaemonClient::connectToDaemon()
     m_socket->connectToServer(socketPath());
 }
 
-void DaemonClient::sendRequest(const QString &method, const QJsonObject &params)
+int DaemonClient::sendRequest(const QString &method, const QJsonObject &params)
 {
     if (!m_connected) {
-        return;
+        return -1;
     }
 
+    const int id = m_nextId++;
     QJsonObject req;
     req.insert(QStringLiteral("jsonrpc"), QStringLiteral("2.0"));
-    req.insert(QStringLiteral("id"), m_nextId++);
+    req.insert(QStringLiteral("id"), id);
     req.insert(QStringLiteral("method"), method);
     req.insert(QStringLiteral("params"), params);
 
     QByteArray line = QJsonDocument(req).toJson(QJsonDocument::Compact);
     line.append('\n');
     m_socket->write(line);
+    return id;
 }
 
 void DaemonClient::onConnected()

@@ -1,0 +1,65 @@
+#pragma once
+
+#include <QAbstractListModel>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QString>
+#include <QVector>
+
+class DaemonClient;
+
+struct ThreadItem {
+    qint64 messageId = 0;
+    qint64 accountId = 0;
+    qint64 folderId = 0;
+    QString senderName;
+    QString subject;
+    QString snippet;
+    QString timestampText;
+    bool unread = false;
+    bool starred = false;
+    bool hasAttachments = false;
+    bool bodySynced = false;
+};
+
+class ThreadListModel : public QAbstractListModel
+{
+    Q_OBJECT
+
+public:
+    enum Roles {
+        MessageIdRole = Qt::UserRole + 1,
+        AccountIdRole,
+        FolderIdRole,
+        SenderNameRole,
+        SubjectRole,
+        SnippetRole,
+        TimestampTextRole,
+        UnreadRole,
+        StarredRole,
+        HasAttachmentsRole,
+        BodySyncedRole
+    };
+
+    explicit ThreadListModel(DaemonClient *client, QObject *parent = nullptr);
+
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    QHash<int, QByteArray> roleNames() const override;
+
+    Q_INVOKABLE void search(const QString &query, qint64 folderId = 0);
+    Q_INVOKABLE void requestBody(qint64 accountId, qint64 messageId);
+    Q_INVOKABLE void prefetchRange(int firstRow, int lastRow);
+
+private slots:
+    void onResponse(int id, const QJsonObject &result, const QJsonObject &error);
+    void onNotification(const QString &method, const QJsonObject &params);
+
+private:
+    static QString formatTimestamp(qint64 epochSecs);
+    static QString extractSender(const QString &fromJson);
+
+    DaemonClient *m_client = nullptr;
+    QVector<ThreadItem> m_items;
+    int m_searchReqId = -1;
+};

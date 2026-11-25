@@ -4,6 +4,9 @@ import QtQuick.Layouts
 import Qt.labs.platform as Platform
 import org.kde.kirigami as Kirigami
 
+import "components"
+import "dialogs"
+
 Kirigami.ApplicationWindow {
     id: root
     title: i18n("Pelliper")
@@ -11,9 +14,6 @@ Kirigami.ApplicationWindow {
     height: 760
     minimumWidth: 720
     minimumHeight: 480
-
-    property string folderMode: "unified" // "unified" | "all"
-    property bool showBodyPreview: true
 
     Platform.MenuBar {
         Platform.Menu {
@@ -25,7 +25,15 @@ Kirigami.ApplicationWindow {
             }
             Platform.MenuItem {
                 text: i18n("&Add Account…")
-                onTriggered: console.log("Add Account wizard triggered")
+                onTriggered: {
+                    accountSetupDialog.resetWizard()
+                    accountSetupDialog.open()
+                }
+            }
+            Platform.MenuItem {
+                text: i18n("&Settings…")
+                shortcut: StandardKey.Preferences
+                onTriggered: settingsDialog.open()
             }
             Platform.MenuSeparator {}
             Platform.MenuItem {
@@ -45,16 +53,22 @@ Kirigami.ApplicationWindow {
                 Platform.MenuItem {
                     text: i18n("&Unified")
                     checkable: true
-                    checked: root.folderMode === "unified"
+                    checked: appSettings.folderMode === "unified"
                     group: folderModeGroup
-                    onTriggered: root.folderMode = "unified"
+                    onTriggered: {
+                        appSettings.folderMode = "unified"
+                        folderModel.folderMode = "unified"
+                    }
                 }
                 Platform.MenuItem {
                     text: i18n("&All Folders")
                     checkable: true
-                    checked: root.folderMode === "all"
+                    checked: appSettings.folderMode === "all"
                     group: folderModeGroup
-                    onTriggered: root.folderMode = "all"
+                    onTriggered: {
+                        appSettings.folderMode = "all"
+                        folderModel.folderMode = "all"
+                    }
                 }
             }
         }
@@ -66,6 +80,14 @@ Kirigami.ApplicationWindow {
                 onTriggered: aboutDialog.open()
             }
         }
+    }
+
+    AccountSetupDialog {
+        id: accountSetupDialog
+    }
+
+    SettingsDialog {
+        id: settingsDialog
     }
 
     Kirigami.Dialog {
@@ -92,6 +114,7 @@ Kirigami.ApplicationWindow {
     }
 
     pageStack.initialPage: Kirigami.Page {
+        id: mainPage
         title: i18n("Inbox")
         padding: 0
 
@@ -99,84 +122,37 @@ Kirigami.ApplicationWindow {
             anchors.fill: parent
             spacing: 0
 
-            // Column 1: Folder Sidebar
-            Rectangle {
+            FolderSidebar {
+                id: folderSidebar
                 Layout.preferredWidth: 230
                 Layout.fillHeight: true
-                color: Kirigami.Theme.alternateBackgroundColor
-
-                ColumnLayout {
-                    anchors.fill: parent
-                    anchors.margins: Kirigami.Units.smallSpacing
-                    spacing: Kirigami.Units.smallSpacing
-
-                    Controls.Label {
-                        text: root.folderMode === "unified" ? i18n("Unified Folders") : i18n("All Accounts")
-                        font.bold: true
-                    }
-
-                    Controls.Label {
-                        text: i18n("No accounts configured yet.\nUse File → Add Account…")
-                        wrapMode: Text.WordWrap
-                        opacity: 0.7
-                        Layout.fillWidth: true
-                    }
-
-                    Item { Layout.fillHeight: true }
-
-                    Controls.Label {
-                        text: daemonClient.statusText
-                        font.pointSize: Kirigami.Theme.smallFont.pointSize
-                        opacity: 0.7
-                    }
+                onFolderSelected: (folderId, folderName, folderRole) => {
+                    mainPage.title = folderName
+                    messageListPane.activeFolderId = folderId
+                    threadListModel.search("", folderId)
                 }
             }
 
             Kirigami.Separator { Layout.fillHeight: true }
 
-            // Column 2: Message List + Top Search Bar
-            ColumnLayout {
-                Layout.preferredWidth: 340
+            MessageListPane {
+                id: messageListPane
+                Layout.preferredWidth: 360
                 Layout.fillHeight: true
-                spacing: 0
-
-                Controls.ToolBar {
-                    Layout.fillWidth: true
-                    Kirigami.SearchField {
-                        id: searchField
-                        anchors.fill: parent
-                        anchors.margins: Kirigami.Units.smallSpacing
-                        placeholderText: i18n("Search (from:, in:, is:, has:)…")
-                    }
-                }
-
-                Item {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-
-                    Kirigami.PlaceholderMessage {
-                        anchors.centerIn: parent
-                        width: parent.width - Kirigami.Units.largeSpacing * 2
-                        text: i18n("No Messages")
-                        explanation: i18n("Add an email account to start syncing with pelliper-daemon.")
-                        icon.name: "mail-receive"
-                    }
+                onMessageSelected: (accountId, messageId, senderName, subject, snippet) => {
+                    messageViewPane.messageId = messageId
+                    messageViewPane.senderName = senderName
+                    messageViewPane.subject = subject
+                    messageViewPane.bodyText = snippet
                 }
             }
 
             Kirigami.Separator { Layout.fillHeight: true }
 
-            // Column 3: Reading Pane
-            Item {
+            MessageViewPane {
+                id: messageViewPane
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-
-                Kirigami.PlaceholderMessage {
-                    anchors.centerIn: parent
-                    width: parent.width - Kirigami.Units.largeSpacing * 2
-                    text: i18n("Select a conversation to read")
-                    icon.name: "mail-read"
-                }
             }
         }
     }

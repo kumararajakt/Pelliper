@@ -18,7 +18,7 @@ public:
     QString statusText() const;
 
     Q_INVOKABLE void connectToDaemon();
-    Q_INVOKABLE void sendRequest(const QString &method, const QJsonObject &params = {});
+    Q_INVOKABLE int sendRequest(const QString &method, const QJsonObject &params = {});
 
 signals:
     void connectedChanged();
