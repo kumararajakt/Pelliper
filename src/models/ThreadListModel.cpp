@@ -98,6 +98,31 @@ void ThreadListModel::prefetchRange(int firstRow, int lastRow)
     }
 }
 
+void ThreadListModel::removeMessageOptimistic(qint64 messageId)
+{
+    for (int i = 0; i < m_items.size(); ++i) {
+        if (m_items[i].messageId == messageId) {
+            beginRemoveRows(QModelIndex(), i, i);
+            m_items.removeAt(i);
+            endRemoveRows();
+            break;
+        }
+    }
+}
+
+void ThreadListModel::updateFlagsOptimistic(qint64 messageId, bool unread, bool starred)
+{
+    for (int i = 0; i < m_items.size(); ++i) {
+        if (m_items[i].messageId == messageId) {
+            m_items[i].unread = unread;
+            m_items[i].starred = starred;
+            const QModelIndex idx = index(i);
+            Q_EMIT dataChanged(idx, idx, { UnreadRole, StarredRole });
+            break;
+        }
+    }
+}
+
 void ThreadListModel::onResponse(int id, const QJsonObject &result, const QJsonObject &error)
 {
     if (id != m_searchReqId || !error.isEmpty()) {

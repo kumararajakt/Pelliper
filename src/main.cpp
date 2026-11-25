@@ -12,6 +12,7 @@
 
 #include "app/AccountController.h"
 #include "app/AppSettings.h"
+#include "app/MessageController.h"
 #include "ipc/DaemonClient.h"
 #include "models/FolderModel.h"
 #include "models/ThreadListModel.h"
@@ -33,6 +34,7 @@ int main(int argc, char *argv[])
     AppSettings appSettings;
     DaemonClient daemonClient;
     AccountController accountController(&daemonClient);
+    MessageController messageController(&daemonClient);
     FolderModel folderModel(&daemonClient);
     folderModel.setFolderMode(appSettings.folderMode());
     ThreadListModel threadListModel(&daemonClient);
@@ -48,6 +50,7 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty(QStringLiteral("appSettings"), &appSettings);
     engine.rootContext()->setContextProperty(QStringLiteral("daemonClient"), &daemonClient);
     engine.rootContext()->setContextProperty(QStringLiteral("accountController"), &accountController);
+    engine.rootContext()->setContextProperty(QStringLiteral("messageController"), &messageController);
     engine.rootContext()->setContextProperty(QStringLiteral("folderModel"), &folderModel);
     engine.rootContext()->setContextProperty(QStringLiteral("threadListModel"), &threadListModel);
 

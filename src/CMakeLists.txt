@@ -11,6 +11,8 @@ target_sources(pelliper PRIVATE
     app/AppSettings.cpp
     app/AccountController.h
     app/AccountController.cpp
+    app/MessageController.h
+    app/MessageController.cpp
     ipc/DaemonClient.h
     ipc/DaemonClient.cpp
     models/FolderModel.h
@@ -26,6 +28,7 @@ ecm_target_qml_sources(pelliper
         qml/components/MessageListPane.qml
         qml/components/MessageViewPane.qml
         qml/dialogs/AccountSetupDialog.qml
+        qml/dialogs/ComposerDialog.qml
         qml/dialogs/SettingsDialog.qml
 )
 

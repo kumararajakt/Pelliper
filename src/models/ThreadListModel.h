@@ -50,6 +50,8 @@ public:
     Q_INVOKABLE void search(const QString &query, qint64 folderId = 0);
     Q_INVOKABLE void requestBody(qint64 accountId, qint64 messageId);
     Q_INVOKABLE void prefetchRange(int firstRow, int lastRow);
+    Q_INVOKABLE void removeMessageOptimistic(qint64 messageId);
+    Q_INVOKABLE void updateFlagsOptimistic(qint64 messageId, bool unread, bool starred);
 
 private Q_SLOTS:
     void onResponse(int id, const QJsonObject &result, const QJsonObject &error);

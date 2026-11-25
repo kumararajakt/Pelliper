@@ -17,7 +17,7 @@ Kirigami.ApplicationWindow {
             Controls.MenuItem {
                 text: i18n("&New Message…")
                 icon.name: "mail-message-new"
-                onTriggered: console.log("Compose triggered")
+                onTriggered: composerDialog.openCompose(messageController.accountId)
             }
             Controls.MenuItem {
                 text: i18n("&Add Account…")
@@ -84,6 +84,28 @@ Kirigami.ApplicationWindow {
         id: accountSetupDialog
     }
 
+    ComposerDialog {
+        id: composerDialog
+    }
+
+    Connections {
+        target: messageController
+        function onOutboxStatus(status, error) {
+            if (status === "queued") {
+                root.showPassiveNotification(i18n("Sending message…"), "short")
+            } else if (status === "sent") {
+                root.showPassiveNotification(i18n("Message sent"), "short")
+            } else if (status === "failed" || status === "retrying") {
+                root.showPassiveNotification(i18n("Send issue: %1", error), "long")
+            }
+        }
+    }
+
+    Shortcut {
+        sequences: [StandardKey.New]
+        onActivated: composerDialog.openCompose(messageController.accountId)
+    }
+
     Shortcut {
         sequences: [StandardKey.Preferences]
         onActivated: settingsDialog.open()
@@ -147,10 +169,8 @@ Kirigami.ApplicationWindow {
                 Layout.preferredWidth: 360
                 Layout.fillHeight: true
                 onMessageSelected: (accountId, messageId, senderName, subject, snippet) => {
-                    messageViewPane.messageId = messageId
-                    messageViewPane.senderName = senderName
-                    messageViewPane.subject = subject
-                    messageViewPane.bodyText = snippet
+                    messageViewPane.allowRemoteImages = false
+                    messageController.openMessage(accountId, messageId)
                 }
             }
 
@@ -160,6 +180,32 @@ Kirigami.ApplicationWindow {
                 id: messageViewPane
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                onReplyRequested: composerDialog.openReply(
+                    messageController.accountId,
+                    messageController.senderAddress,
+                    messageController.senderName,
+                    messageController.subject,
+                    messageController.dateText,
+                    messageController.textPlain
+                )
+                onReplyAllRequested: composerDialog.openReplyAll(
+                    messageController.accountId,
+                    messageController.senderAddress,
+                    messageController.ccText,
+                    messageController.senderName,
+                    messageController.subject,
+                    messageController.dateText,
+                    messageController.textPlain
+                )
+                onForwardRequested: composerDialog.openForward(
+                    messageController.accountId,
+                    messageController.senderName,
+                    messageController.toText,
+                    messageController.subject,
+                    messageController.dateText,
+                    messageController.textPlain,
+                    messageController.attachments
+                )
             }
         }
     }
