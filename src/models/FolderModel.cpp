@@ -2,11 +2,16 @@
 #include "../ipc/DaemonClient.h"
 
 #include <QMap>
+#include <QSettings>
 
 FolderModel::FolderModel(DaemonClient *client, QObject *parent)
     : QAbstractListModel(parent)
     , m_client(client)
 {
+    QSettings settings;
+    const QStringList saved = settings.value(QStringLiteral("ui/collapsedFolders")).toStringList();
+    m_collapsedKeys = QSet<QString>(saved.cbegin(), saved.cend());
+
     connect(m_client, &DaemonClient::responseReceived, this, &FolderModel::onResponse);
     connect(m_client, &DaemonClient::notificationReceived, this, &FolderModel::onNotification);
     connect(m_client, &DaemonClient::connectedChanged, this, [this]() {
@@ -137,6 +142,8 @@ void FolderModel::toggleCollapsed(const QString &key)
     } else {
         m_collapsedKeys.insert(key);
     }
+    QSettings settings;
+    settings.setValue(QStringLiteral("ui/collapsedFolders"), QStringList(m_collapsedKeys.cbegin(), m_collapsedKeys.cend()));
     rebuildProjection();
 }
 
