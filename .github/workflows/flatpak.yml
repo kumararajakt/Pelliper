@@ -17,6 +17,11 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Install flatpak and flatpak-builder
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+
       - name: Inject Google OAuth build-time credentials (if configured)
         env:
           GOOGLE_CID: ${{ secrets.PELLIPER_GOOGLE_CLIENT_ID }}
