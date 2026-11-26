@@ -1,0 +1,39 @@
+name: Build Flatpak
+
+on:
+  push:
+    tags:
+      - '*'
+  workflow_dispatch:
+
+jobs:
+  flatpak:
+    name: Build Flatpak (x86_64)
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Inject Google OAuth build-time credentials (if configured)
+        env:
+          GOOGLE_CID: ${{ secrets.PELLIPER_GOOGLE_CLIENT_ID }}
+          GOOGLE_CSEC: ${{ secrets.PELLIPER_GOOGLE_CLIENT_SECRET }}
+        run: |
+          if [ -n "$GOOGLE_CID" ] && [ -n "$GOOGLE_CSEC" ]; then
+            jq --arg cid "$GOOGLE_CID" --arg csec "$GOOGLE_CSEC" \
+              '(.modules[] | select(.name == "pelliper-daemon") | ."build-options".env) += {
+                "PELLIPER_GOOGLE_CLIENT_ID": $cid,
+                "PELLIPER_GOOGLE_CLIENT_SECRET": $csec
+              }' packaging/com.pelliper.Pelliper.json > packaging/com.pelliper.Pelliper.json.tmp
+            mv packaging/com.pelliper.Pelliper.json.tmp packaging/com.pelliper.Pelliper.json
+          fi
+
+      - name: Build Flatpak bundle
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: com.pelliper.Pelliper.flatpak
+          manifest-path: packaging/com.pelliper.Pelliper.json
+          cache-key: flatpak-${{ hashFiles('packaging/com.pelliper.Pelliper.json', 'packaging/cargo-sources.json') }}
