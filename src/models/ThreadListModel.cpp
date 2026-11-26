@@ -57,8 +57,11 @@ QHash<int, QByteArray> ThreadListModel::roleNames() const
     };
 }
 
-void ThreadListModel::search(const QString &query, qint64 folderId, bool serverSearch)
+void ThreadListModel::search(const QString &query, qint64 folderId, bool serverSearch, const QString &folderRole)
 {
+    m_lastQuery = query;
+    m_lastFolderId = folderId;
+    m_lastFolderRole = folderRole;
     ++m_activeSearchId;
     const bool wantServer = serverSearch && !query.trimmed().isEmpty();
     if (m_searchingServer != wantServer) {
@@ -69,6 +72,8 @@ void ThreadListModel::search(const QString &query, qint64 folderId, bool serverS
     QJsonObject params;
     if (folderId > 0) {
         params.insert(QStringLiteral("folder_id"), folderId);
+    } else if (!folderRole.isEmpty()) {
+        params.insert(QStringLiteral("folder_role"), folderRole);
     }
     params.insert(QStringLiteral("query"), query);
     params.insert(QStringLiteral("limit"), 100);
@@ -208,6 +213,17 @@ void ThreadListModel::onNotification(const QString &method, const QJsonObject &p
         if (params.value(QStringLiteral("done")).toBool() && m_searchingServer) {
             m_searchingServer = false;
             Q_EMIT searchingServerChanged();
+        }
+    } else if (method == QStringLiteral("sync.state_changed")) {
+        const QString st = params.value(QStringLiteral("state")).toString();
+        const bool nowSyncing = (st == QStringLiteral("syncing_headers") || st == QStringLiteral("syncing_bodies"));
+        if (m_syncing != nowSyncing) {
+            m_syncing = nowSyncing;
+            Q_EMIT syncingChanged();
+        }
+    } else if (method == QStringLiteral("message.new")) {
+        if (m_lastQuery.trimmed().isEmpty()) {
+            search(m_lastQuery, m_lastFolderId, false, m_lastFolderRole);
         }
     }
 }

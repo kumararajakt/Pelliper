@@ -3,6 +3,7 @@
 #include <QAbstractListModel>
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QSet>
 #include <QString>
 #include <QVector>
 
@@ -12,9 +13,14 @@ struct FolderItem {
     qint64 id = 0;
     qint64 accountId = 0;
     QString name;
+    QString fullPath;
+    QString collapseKey;
     QString role;
     QString iconName;
     int unreadCount = 0;
+    int depth = 0;
+    bool hasChildren = false;
+    bool expanded = true;
     bool isHeader = false;
     bool isUnified = false;
 };
@@ -33,7 +39,11 @@ public:
         IconNameRole,
         UnreadCountRole,
         IsHeaderRole,
-        IsUnifiedRole
+        IsUnifiedRole,
+        DepthRole,
+        HasChildrenRole,
+        ExpandedRole,
+        CollapseKeyRole
     };
 
     explicit FolderModel(DaemonClient *client, QObject *parent = nullptr);
@@ -51,6 +61,7 @@ public:
     Q_INVOKABLE void renameFolder(qint64 folderId, const QString &newPath);
     Q_INVOKABLE void deleteFolder(qint64 folderId);
     Q_INVOKABLE void emptyFolder(qint64 folderId);
+    Q_INVOKABLE void toggleCollapsed(const QString &key);
 
 Q_SIGNALS:
     void folderModeChanged();
@@ -67,5 +78,6 @@ private:
     QString m_folderMode = QStringLiteral("unified");
     QJsonArray m_rawFolders;
     QVector<FolderItem> m_items;
+    QSet<QString> m_collapsedKeys;
     int m_listReqId = -1;
 };

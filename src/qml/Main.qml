@@ -342,7 +342,8 @@ Kirigami.ApplicationWindow {
                     onFolderSelected: (folderId, folderName, folderRole) => {
                         mainPage.title = folderName
                         messageListPane.activeFolderId = folderId
-                        threadListModel.search("", folderId)
+                        messageListPane.activeFolderRole = folderRole
+                        threadListModel.search("", folderId, false, folderRole)
                     }
                 }
 

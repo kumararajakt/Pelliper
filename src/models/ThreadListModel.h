@@ -26,6 +26,7 @@ class ThreadListModel : public QAbstractListModel
 {
     Q_OBJECT
     Q_PROPERTY(bool searchingServer READ searchingServer NOTIFY searchingServerChanged)
+    Q_PROPERTY(bool syncing READ syncing NOTIFY syncingChanged)
 
 public:
     enum Roles {
@@ -49,8 +50,12 @@ public:
     QHash<int, QByteArray> roleNames() const override;
 
     bool searchingServer() const { return m_searchingServer; }
+    bool syncing() const { return m_syncing; }
 
-    Q_INVOKABLE void search(const QString &query, qint64 folderId = 0, bool serverSearch = false);
+    Q_INVOKABLE void search(const QString &query,
+                              qint64 folderId = 0,
+                              bool serverSearch = false,
+                              const QString &folderRole = QString());
     Q_INVOKABLE void requestBody(qint64 accountId, qint64 messageId);
     Q_INVOKABLE void prefetchRange(int firstRow, int lastRow);
     Q_INVOKABLE void removeMessageOptimistic(qint64 messageId);
@@ -58,6 +63,7 @@ public:
 
 Q_SIGNALS:
     void searchingServerChanged();
+    void syncingChanged();
 
 private Q_SLOTS:
     void onResponse(int id, const QJsonObject &result, const QJsonObject &error);
@@ -72,4 +78,8 @@ private:
     int m_searchReqId = -1;
     qint64 m_activeSearchId = 0;
     bool m_searchingServer = false;
+    bool m_syncing = false;
+    QString m_lastQuery;
+    qint64 m_lastFolderId = 0;
+    QString m_lastFolderRole = QStringLiteral("inbox");
 };

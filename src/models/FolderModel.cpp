@@ -36,6 +36,10 @@ QVariant FolderModel::data(const QModelIndex &index, int role) const
     case UnreadCountRole: return it.unreadCount;
     case IsHeaderRole: return it.isHeader;
     case IsUnifiedRole: return it.isUnified;
+    case DepthRole: return it.depth;
+    case HasChildrenRole: return it.hasChildren;
+    case ExpandedRole: return it.expanded;
+    case CollapseKeyRole: return it.collapseKey;
     default: return {};
     }
 }
@@ -50,7 +54,11 @@ QHash<int, QByteArray> FolderModel::roleNames() const
         { IconNameRole, "iconName" },
         { UnreadCountRole, "unreadCount" },
         { IsHeaderRole, "isHeader" },
-        { IsUnifiedRole, "isUnified" }
+        { IsUnifiedRole, "isUnified" },
+        { DepthRole, "depth" },
+        { HasChildrenRole, "hasChildren" },
+        { ExpandedRole, "expanded" },
+        { CollapseKeyRole, "collapseKey" }
     };
 }
 
@@ -120,6 +128,16 @@ void FolderModel::emptyFolder(qint64 folderId)
     QJsonObject params;
     params.insert(QStringLiteral("folder_id"), folderId);
     m_client->sendRequest(QStringLiteral("folder.empty"), params);
+}
+
+void FolderModel::toggleCollapsed(const QString &key)
+{
+    if (m_collapsedKeys.contains(key)) {
+        m_collapsedKeys.remove(key);
+    } else {
+        m_collapsedKeys.insert(key);
+    }
+    rebuildProjection();
 }
 
 void FolderModel::onResponse(int id, const QJsonObject &result, const QJsonObject &error)
@@ -203,61 +221,133 @@ void FolderModel::rebuildProjection()
         }
 
         if (!m_rawFolders.isEmpty()) {
-            m_items.append(FolderItem{ 0, 0, QStringLiteral("Unified"), QString(), QString(), 0, true, true });
+            m_items.append(FolderItem{ 0, 0, QStringLiteral("Unified"), QString(), QString(), QString(), QString(), 0, 0, false, true, true, true });
             for (const QString &r : specialOrder) {
                 m_items.append(FolderItem{
-                    0, 0, specialNames.value(r), r, iconForRole(r), unifiedUnread.value(r, 0), false, true
+                    0, 0, specialNames.value(r), QString(), QString(), r, iconForRole(r), unifiedUnread.value(r, 0), 0, false, true, false, true
                 });
             }
         }
 
-        // Non-common / custom folders grouped per account below Unified
+        // Non-common / custom folders grouped per account below Unified (with tree depth & folding)
+        QMap<qint64, QString> accountEmails;
         QMap<qint64, QVector<FolderItem>> customByAccount;
         for (const auto &v : m_rawFolders) {
             const QJsonObject f = v.toObject();
+            const qint64 aid = f.value(QStringLiteral("account_id")).toInteger();
+            accountEmails.insert(aid, f.value(QStringLiteral("account_email")).toString());
             const QString role = f.value(QStringLiteral("role")).toString();
             if (role == QStringLiteral("custom")) {
-                const qint64 aid = f.value(QStringLiteral("account_id")).toInteger();
+                const QString fp = f.value(QStringLiteral("full_path")).toString();
+                const QString delim = f.value(QStringLiteral("delimiter")).toString(QStringLiteral("/"));
+                const int depth = qMax(0, static_cast<int>(fp.split(delim, Qt::SkipEmptyParts).size()) - 1);
                 customByAccount[aid].append(FolderItem{
                     f.value(QStringLiteral("id")).toInteger(),
                     aid,
                     f.value(QStringLiteral("name")).toString(),
+                    fp,
+                    QStringLiteral("folder:%1:%2").arg(aid).arg(fp),
                     role,
                     iconForRole(role),
                     f.value(QStringLiteral("unread_count")).toInt(),
+                    depth,
+                    false,
+                    true,
                     false,
                     false
                 });
             }
         }
-        for (auto it = customByAccount.cbegin(); it != customByAccount.cend(); ++it) {
-            m_items.append(FolderItem{
-                0, it.key(), QStringLiteral("Account %1 Folders").arg(it.key()), QString(), QString(), 0, true, false
+        for (auto it = customByAccount.begin(); it != customByAccount.end(); ++it) {
+            std::sort(it.value().begin(), it.value().end(), [](const FolderItem &a, const FolderItem &b) {
+                return a.fullPath.compare(b.fullPath, Qt::CaseInsensitive) < 0;
             });
-            m_items.append(it.value());
+            const QString accKey = QStringLiteral("acc:%1").arg(it.key());
+            const bool accExpanded = !m_collapsedKeys.contains(accKey);
+            const QString headerTitle = accountEmails.value(it.key()).isEmpty()
+                ? QStringLiteral("Account %1").arg(it.key())
+                : accountEmails.value(it.key());
+            m_items.append(FolderItem{
+                0, it.key(), headerTitle, QString(), accKey, QString(), QString(), 0, 0, true, accExpanded, true, false
+            });
+            if (!accExpanded) {
+                continue;
+            }
+            QString collapsedPrefix;
+            for (int i = 0; i < it.value().size(); ++i) {
+                FolderItem item = it.value()[i];
+                if (!collapsedPrefix.isEmpty() && item.fullPath.startsWith(collapsedPrefix)) {
+                    continue;
+                }
+                collapsedPrefix.clear();
+                item.hasChildren = (i + 1 < it.value().size())
+                    && it.value()[i + 1].fullPath.startsWith(item.fullPath + QLatin1Char('/'));
+                item.expanded = !m_collapsedKeys.contains(item.collapseKey);
+                if (item.hasChildren && !item.expanded) {
+                    collapsedPrefix = item.fullPath + QLatin1Char('/');
+                }
+                m_items.append(item);
+            }
         }
     } else {
+        QMap<qint64, QString> accountEmails;
         QMap<qint64, QVector<FolderItem>> byAccount;
         for (const auto &v : m_rawFolders) {
             const QJsonObject f = v.toObject();
             const qint64 aid = f.value(QStringLiteral("account_id")).toInteger();
+            accountEmails.insert(aid, f.value(QStringLiteral("account_email")).toString());
             const QString role = f.value(QStringLiteral("role")).toString();
+            const QString fp = f.value(QStringLiteral("full_path")).toString();
+            const QString delim = f.value(QStringLiteral("delimiter")).toString(QStringLiteral("/"));
+            const int depth = qMax(0, static_cast<int>(fp.split(delim, Qt::SkipEmptyParts).size()) - 1);
             byAccount[aid].append(FolderItem{
                 f.value(QStringLiteral("id")).toInteger(),
                 aid,
                 f.value(QStringLiteral("name")).toString(),
+                fp,
+                QStringLiteral("folder:%1:%2").arg(aid).arg(fp),
                 role,
                 iconForRole(role),
                 f.value(QStringLiteral("unread_count")).toInt(),
+                depth,
+                false,
+                true,
                 false,
                 false
             });
         }
-        for (auto it = byAccount.cbegin(); it != byAccount.cend(); ++it) {
-            m_items.append(FolderItem{
-                0, it.key(), QStringLiteral("Account %1").arg(it.key()), QString(), QString(), 0, true, false
+        for (auto it = byAccount.begin(); it != byAccount.end(); ++it) {
+            std::sort(it.value().begin(), it.value().end(), [](const FolderItem &a, const FolderItem &b) {
+                if (a.role == QStringLiteral("inbox") && b.role != QStringLiteral("inbox")) return true;
+                if (b.role == QStringLiteral("inbox") && a.role != QStringLiteral("inbox")) return false;
+                return a.fullPath.compare(b.fullPath, Qt::CaseInsensitive) < 0;
             });
-            m_items.append(it.value());
+            const QString accKey = QStringLiteral("acc:%1").arg(it.key());
+            const bool accExpanded = !m_collapsedKeys.contains(accKey);
+            const QString headerTitle = accountEmails.value(it.key()).isEmpty()
+                ? QStringLiteral("Account %1").arg(it.key())
+                : accountEmails.value(it.key());
+            m_items.append(FolderItem{
+                0, it.key(), headerTitle, QString(), accKey, QString(), QString(), 0, 0, true, accExpanded, true, false
+            });
+            if (!accExpanded) {
+                continue;
+            }
+            QString collapsedPrefix;
+            for (int i = 0; i < it.value().size(); ++i) {
+                FolderItem item = it.value()[i];
+                if (!collapsedPrefix.isEmpty() && item.fullPath.startsWith(collapsedPrefix)) {
+                    continue;
+                }
+                collapsedPrefix.clear();
+                item.hasChildren = (i + 1 < it.value().size())
+                    && it.value()[i + 1].fullPath.startsWith(item.fullPath + QLatin1Char('/'));
+                item.expanded = !m_collapsedKeys.contains(item.collapseKey);
+                if (item.hasChildren && !item.expanded) {
+                    collapsedPrefix = item.fullPath + QLatin1Char('/');
+                }
+                m_items.append(item);
+            }
         }
     }
 

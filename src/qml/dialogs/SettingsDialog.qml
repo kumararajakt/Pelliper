@@ -83,12 +83,12 @@ Kirigami.Dialog {
                             Layout.fillWidth: true
                             Controls.TextField {
                                 id: nameInput
-                                Kirigami.FormData.label: i18n("Display Name:")
+                                Kirigami.FormData.label: qsTr("Display Name:")
                                 text: modelData.display_name
                             }
                             Controls.SpinBox {
                                 id: intervalSpin
-                                Kirigami.FormData.label: i18n("Sync Interval (s):")
+                                Kirigami.FormData.label: qsTr("Sync Interval (s):")
                                 from: 60
                                 to: 3600
                                 stepSize: 60
@@ -96,11 +96,11 @@ Kirigami.Dialog {
                             }
                             Controls.TextArea {
                                 id: sigInput
-                                Kirigami.FormData.label: i18n("Signature:")
+                                Kirigami.FormData.label: qsTr("Signature:")
                                 Layout.fillWidth: true
                                 implicitHeight: 64
                                 text: modelData.signature || ""
-                                placeholderText: i18n("Optional email signature…")
+                                placeholderText: qsTr("Optional email signature…")
                             }
                         }
 

@@ -8,9 +8,31 @@ Rectangle {
     color: Kirigami.Theme.alternateBackgroundColor
 
     property double selectedFolderId: 0
+    property string selectedFolderRole: "inbox"
     property double dialogTargetId: 0
     property string dialogMode: "" // "create" | "rename"
     signal folderSelected(var folderId, string folderName, string folderRole)
+
+    Connections {
+        target: folderModel
+        function onModelReset() {
+            if (folderModel.rowCount() > 0 && sidebar.selectedFolderId === 0) {
+                for (let i = 0; i < folderModel.rowCount(); ++i) {
+                    const idx = folderModel.index(i, 0)
+                    const isHeader = folderModel.data(idx, 263) // IsHeaderRole
+                    const role = folderModel.data(idx, 260) // RoleTypeRole
+                    if (!isHeader && role === "inbox") {
+                        const fid = folderModel.data(idx, 257) // IdRole
+                        const fname = folderModel.data(idx, 259) // NameRole
+                        sidebar.selectedFolderId = fid
+                        sidebar.selectedFolderRole = role
+                        sidebar.folderSelected(fid, fname, role)
+                        break
+                    }
+                }
+            }
+        }
+    }
 
     Kirigami.Dialog {
         id: folderNameDialog
@@ -44,11 +66,22 @@ Rectangle {
 
             delegate: Controls.ItemDelegate {
                 width: folderList.width
-                enabled: !model.isHeader
-                highlighted: !model.isHeader && model.folderId > 0 && model.folderId === sidebar.selectedFolderId
+                highlighted: !model.isHeader && ((model.folderId > 0 && model.folderId === sidebar.selectedFolderId) || (model.isUnified && model.folderRole === sidebar.selectedFolderRole && sidebar.selectedFolderId === 0))
 
                 contentItem: RowLayout {
                     spacing: Kirigami.Units.smallSpacing
+                    Item {
+                        visible: !model.isHeader && model.depth > 0
+                        Layout.preferredWidth: model.depth * Kirigami.Units.largeSpacing
+                    }
+                    Controls.ToolButton {
+                        visible: model.hasChildren
+                        implicitWidth: Kirigami.Units.iconSizes.small + 4
+                        implicitHeight: Kirigami.Units.iconSizes.small + 4
+                        padding: 0
+                        icon.name: model.expanded ? "arrow-down" : "arrow-right"
+                        onClicked: folderModel.toggleCollapsed(model.collapseKey)
+                    }
                     Kirigami.Icon {
                         visible: !model.isHeader
                         source: model.iconName
@@ -59,7 +92,7 @@ Rectangle {
                         Layout.fillWidth: true
                         text: model.name
                         font.bold: model.isHeader || model.unreadCount > 0
-                        opacity: model.isHeader ? 0.65 : 1.0
+                        opacity: model.isHeader ? 0.75 : 1.0
                         elide: Text.ElideRight
                     }
                     Controls.Label {
@@ -71,10 +104,15 @@ Rectangle {
                 }
 
                 onClicked: {
-                    if (!model.isHeader) {
-                        sidebar.selectedFolderId = model.folderId
-                        sidebar.folderSelected(model.folderId, model.name, model.folderRole)
+                    if (model.isHeader) {
+                        if (model.hasChildren) {
+                            folderModel.toggleCollapsed(model.collapseKey)
+                        }
+                        return
                     }
+                    sidebar.selectedFolderId = model.folderId
+                    sidebar.selectedFolderRole = model.folderRole
+                    sidebar.folderSelected(model.folderId, model.name, model.folderRole)
                 }
 
                 Controls.Menu {

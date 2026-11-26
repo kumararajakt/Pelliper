@@ -8,6 +8,7 @@ ColumnLayout {
     spacing: 0
 
     property double activeFolderId: 0
+    property string activeFolderRole: "inbox"
     property double selectedMessageId: 0
     property var selectedIds: []
     property bool selectionMode: selectedIds.length > 0
@@ -43,7 +44,7 @@ ColumnLayout {
     Timer {
         id: searchDebounce
         interval: 150
-        onTriggered: threadListModel.search(searchField.text, listPane.activeFolderId, false)
+        onTriggered: threadListModel.search(searchField.text, listPane.activeFolderId, false, listPane.activeFolderRole)
     }
 
     Timer {
@@ -51,7 +52,7 @@ ColumnLayout {
         interval: 450
         onTriggered: {
             if (searchField.text.trim().length > 0) {
-                threadListModel.search(searchField.text, listPane.activeFolderId, true)
+                threadListModel.search(searchField.text, listPane.activeFolderId, true, listPane.activeFolderRole)
             }
         }
     }
@@ -270,11 +271,13 @@ ColumnLayout {
             anchors.centerIn: parent
             visible: messageList.count === 0
             width: parent.width - Kirigami.Units.largeSpacing * 2
-            text: i18n("No Messages")
-            explanation: accountController.accountCount === 0
-                ? i18n("Use File → Add Account… to start syncing.")
-                : i18n("No messages match this folder or search.")
-            icon.name: "mail-receive"
+            text: threadListModel.syncing ? i18n("Syncing mail…") : i18n("No Messages")
+            explanation: threadListModel.syncing
+                ? i18n("Fetching folders and message headers from server…")
+                : (accountController.accountCount === 0
+                    ? i18n("Use File → Add Account… to start syncing.")
+                    : i18n("No messages match this folder or search."))
+            icon.name: threadListModel.syncing ? "view-refresh" : "mail-receive"
         }
     }
 }
