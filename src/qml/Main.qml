@@ -31,6 +31,8 @@ Kirigami.ApplicationWindow {
             Controls.MenuItem {
                 text: i18n("&New Message…")
                 icon.name: "mail-message-new"
+                visible: accountController.accountCount > 0
+                enabled: accountController.accountCount > 0
                 onTriggered: composerDialog.openCompose(messageController.accountId)
             }
             Controls.MenuItem {
@@ -164,27 +166,51 @@ Kirigami.ApplicationWindow {
 
     Shortcut {
         sequences: [StandardKey.New]
+        enabled: accountController.accountCount > 0
         onActivated: composerDialog.openCompose(messageController.accountId)
     }
     Shortcut {
         sequence: "c"
-        enabled: !root.isTextInputFocused()
+        enabled: !root.isTextInputFocused() && accountController.accountCount > 0
         onActivated: composerDialog.openCompose(messageController.accountId)
     }
     Shortcut {
         sequence: "r"
         enabled: !root.isTextInputFocused() && messageController.messageId > 0
-        onActivated: messageViewPane.replyRequested()
+        onActivated: composerDialog.openReply(
+            messageController.accountId,
+            messageController.senderAddress,
+            messageController.senderName,
+            messageController.subject,
+            messageController.dateText,
+            messageController.textPlain
+        )
     }
     Shortcut {
         sequence: "a"
         enabled: !root.isTextInputFocused() && messageController.messageId > 0
-        onActivated: messageViewPane.replyAllRequested()
+        onActivated: composerDialog.openReplyAll(
+            messageController.accountId,
+            messageController.senderAddress,
+            messageController.ccText,
+            messageController.senderName,
+            messageController.subject,
+            messageController.dateText,
+            messageController.textPlain
+        )
     }
     Shortcut {
         sequence: "f"
         enabled: !root.isTextInputFocused() && messageController.messageId > 0
-        onActivated: messageViewPane.forwardRequested()
+        onActivated: composerDialog.openForward(
+            messageController.accountId,
+            messageController.senderName,
+            messageController.toText,
+            messageController.subject,
+            messageController.dateText,
+            messageController.textPlain,
+            messageController.attachments
+        )
     }
     Shortcut {
         sequence: "s"
@@ -225,7 +251,11 @@ Kirigami.ApplicationWindow {
     Shortcut {
         sequence: "/"
         enabled: !root.isTextInputFocused()
-        onActivated: messageListPane.focusSearch()
+        onActivated: {
+            if (root.pageStack.currentItem && root.pageStack.currentItem.focusSearch) {
+                root.pageStack.currentItem.focusSearch()
+            }
+        }
     }
 
     Shortcut {
@@ -254,7 +284,7 @@ Kirigami.ApplicationWindow {
                 level: 2
             }
             Controls.Label {
-                text: i18n("Independent Qt/Kirigami email client backed by pelliper-daemon.")
+                text: i18n("Qt/Kirigami email client")
                 wrapMode: Text.WordWrap
             }
             Controls.Label {
@@ -264,71 +294,106 @@ Kirigami.ApplicationWindow {
         }
     }
 
-    pageStack.initialPage: Kirigami.Page {
-        id: mainPage
-        title: i18n("Inbox")
-        padding: 0
+    property bool showingWelcome: accountController.accountCount === 0
 
-        RowLayout {
-            anchors.fill: parent
-            spacing: 0
+    onShowingWelcomeChanged: {
+        pageStack.replace(showingWelcome ? welcomeAddAccountPage : threePanePage)
+    }
 
-            FolderSidebar {
-                id: folderSidebar
-                Layout.preferredWidth: 230
-                Layout.fillHeight: true
-                onFolderSelected: (folderId, folderName, folderRole) => {
-                    mainPage.title = folderName
-                    messageListPane.activeFolderId = folderId
-                    threadListModel.search("", folderId)
+    Component {
+        id: welcomeAddAccountPage
+        Kirigami.Page {
+            Kirigami.PlaceholderMessage {
+                anchors.centerIn: parent
+                width: parent.width - Kirigami.Units.largeSpacing * 4
+                text: i18n("Welcome to Pelliper")
+                icon.name: "mail-client"
+                helpfulAction: Kirigami.Action {
+                    text: i18n("Add Account")
+                    icon.name: "list-add-user"
+                    onTriggered: {
+                        accountSetupDialog.resetWizard()
+                        accountSetupDialog.open()
+                    }
                 }
-            }
-
-            Kirigami.Separator { Layout.fillHeight: true }
-
-            MessageListPane {
-                id: messageListPane
-                Layout.preferredWidth: 360
-                Layout.fillHeight: true
-                onMessageSelected: (accountId, messageId, senderName, subject, snippet) => {
-                    messageViewPane.allowRemoteImages = false
-                    messageController.openMessage(accountId, messageId)
-                }
-            }
-
-            Kirigami.Separator { Layout.fillHeight: true }
-
-            MessageViewPane {
-                id: messageViewPane
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                onReplyRequested: composerDialog.openReply(
-                    messageController.accountId,
-                    messageController.senderAddress,
-                    messageController.senderName,
-                    messageController.subject,
-                    messageController.dateText,
-                    messageController.textPlain
-                )
-                onReplyAllRequested: composerDialog.openReplyAll(
-                    messageController.accountId,
-                    messageController.senderAddress,
-                    messageController.ccText,
-                    messageController.senderName,
-                    messageController.subject,
-                    messageController.dateText,
-                    messageController.textPlain
-                )
-                onForwardRequested: composerDialog.openForward(
-                    messageController.accountId,
-                    messageController.senderName,
-                    messageController.toText,
-                    messageController.subject,
-                    messageController.dateText,
-                    messageController.textPlain,
-                    messageController.attachments
-                )
             }
         }
     }
+
+    Component {
+        id: threePanePage
+        Kirigami.Page {
+            id: mainPage
+            title: i18n("Inbox")
+            padding: 0
+
+            function focusSearch() {
+                messageListPane.focusSearch()
+            }
+
+            RowLayout {
+                anchors.fill: parent
+                spacing: 0
+
+                FolderSidebar {
+                    id: folderSidebar
+                    Layout.preferredWidth: 230
+                    Layout.fillHeight: true
+                    onFolderSelected: (folderId, folderName, folderRole) => {
+                        mainPage.title = folderName
+                        messageListPane.activeFolderId = folderId
+                        threadListModel.search("", folderId)
+                    }
+                }
+
+                Kirigami.Separator { Layout.fillHeight: true }
+
+                MessageListPane {
+                    id: messageListPane
+                    Layout.preferredWidth: 360
+                    Layout.fillHeight: true
+                    onMessageSelected: (accountId, messageId, senderName, subject, snippet) => {
+                        messageViewPane.allowRemoteImages = false
+                        messageController.openMessage(accountId, messageId)
+                    }
+                }
+
+                Kirigami.Separator { Layout.fillHeight: true }
+
+                MessageViewPane {
+                    id: messageViewPane
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    onReplyRequested: composerDialog.openReply(
+                        messageController.accountId,
+                        messageController.senderAddress,
+                        messageController.senderName,
+                        messageController.subject,
+                        messageController.dateText,
+                        messageController.textPlain
+                    )
+                    onReplyAllRequested: composerDialog.openReplyAll(
+                        messageController.accountId,
+                        messageController.senderAddress,
+                        messageController.ccText,
+                        messageController.senderName,
+                        messageController.subject,
+                        messageController.dateText,
+                        messageController.textPlain
+                    )
+                    onForwardRequested: composerDialog.openForward(
+                        messageController.accountId,
+                        messageController.senderName,
+                        messageController.toText,
+                        messageController.subject,
+                        messageController.dateText,
+                        messageController.textPlain,
+                        messageController.attachments
+                    )
+                }
+            }
+        }
+    }
+
+    pageStack.initialPage: accountController.accountCount === 0 ? welcomeAddAccountPage : threePanePage
 }

@@ -202,10 +202,12 @@ Kirigami.Dialog {
                     id: oauthUrlField
                     Layout.fillWidth: true
                     readOnly: true
-                    text: wizard.oauthUrl.length > 0 ? wizard.oauthUrl : "https://accounts.example.com/oauth2/authorize"
+                    text: wizard.oauthUrl
+                    placeholderText: i18n("Generating OAuth2 link…")
                 }
                 Controls.Button {
                     text: i18n("Copy Link")
+                    enabled: wizard.oauthUrl.length > 0
                     onClicked: {
                         oauthUrlField.selectAll()
                         oauthUrlField.copy()
