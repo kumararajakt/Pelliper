@@ -95,11 +95,23 @@ Rectangle {
                         opacity: model.isHeader ? 0.75 : 1.0
                         elide: Text.ElideRight
                     }
-                    Controls.Label {
+                    Rectangle {
                         visible: !model.isHeader && model.unreadCount > 0
-                        text: model.unreadCount
-                        font.bold: true
-                        color: Kirigami.Theme.highlightColor
+                        radius: height / 2
+                        implicitHeight: unreadBadgeLabel.implicitHeight + 4
+                        implicitWidth: Math.max(implicitHeight, unreadBadgeLabel.implicitWidth + 12)
+                        color: highlighted
+                            ? Qt.rgba(1, 1, 1, 0.22)
+                            : Kirigami.Theme.highlightColor
+
+                        Controls.Label {
+                            id: unreadBadgeLabel
+                            anchors.centerIn: parent
+                            text: model.unreadCount
+                            font.bold: true
+                            font.pointSize: Kirigami.Theme.smallFont.pointSize
+                            color: Kirigami.Theme.highlightedTextColor
+                        }
                     }
                 }
 
