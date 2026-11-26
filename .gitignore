@@ -5,3 +5,7 @@
 CMakeLists.txt.user
 *.md
 client_secret_*.json
+.flatpak-builder/
+flatpak-build/
+flatpak-repo/
+*.flatpak
