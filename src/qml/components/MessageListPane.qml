@@ -250,13 +250,12 @@ ColumnLayout {
                     }
                 }
 
-                onClicked: (mouse) => {
-                    if (listPane.selectionMode || (mouse && (mouse.modifiers & Qt.ControlModifier))) {
+                onClicked: {
+                    if (listPane.selectionMode) {
                         listPane.toggleSelection(model.messageId)
                         return
                     }
                     listPane.selectedMessageId = model.messageId
-                    threadListModel.requestBody(model.accountId, model.messageId)
                     listPane.messageSelected(model.accountId, model.messageId, model.senderName, model.subject, model.snippet)
                 }
 

@@ -331,14 +331,15 @@ Kirigami.ApplicationWindow {
                 messageListPane.focusSearch()
             }
 
-            RowLayout {
+            Controls.SplitView {
                 anchors.fill: parent
-                spacing: 0
+                orientation: Qt.Horizontal
 
                 FolderSidebar {
                     id: folderSidebar
-                    Layout.preferredWidth: 230
-                    Layout.fillHeight: true
+                    Controls.SplitView.preferredWidth: 230
+                    Controls.SplitView.minimumWidth: 160
+                    Controls.SplitView.maximumWidth: 420
                     onFolderSelected: (folderId, folderName, folderRole) => {
                         mainPage.title = folderName
                         messageListPane.activeFolderId = folderId
@@ -347,24 +348,20 @@ Kirigami.ApplicationWindow {
                     }
                 }
 
-                Kirigami.Separator { Layout.fillHeight: true }
-
                 MessageListPane {
                     id: messageListPane
-                    Layout.preferredWidth: 360
-                    Layout.fillHeight: true
+                    Controls.SplitView.preferredWidth: 360
+                    Controls.SplitView.minimumWidth: 240
                     onMessageSelected: (accountId, messageId, senderName, subject, snippet) => {
                         messageViewPane.allowRemoteImages = false
                         messageController.openMessage(accountId, messageId)
                     }
                 }
 
-                Kirigami.Separator { Layout.fillHeight: true }
-
                 MessageViewPane {
                     id: messageViewPane
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
+                    Controls.SplitView.fillWidth: true
+                    Controls.SplitView.minimumWidth: 320
                     onReplyRequested: composerDialog.openReply(
                         messageController.accountId,
                         messageController.senderAddress,

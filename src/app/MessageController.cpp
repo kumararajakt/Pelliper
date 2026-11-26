@@ -21,6 +21,13 @@ void MessageController::openMessage(qint64 accountId, qint64 messageId)
 {
     m_accountId = accountId;
     m_messageId = messageId;
+    m_textPlain.clear();
+    m_textHtml.clear();
+    m_attachments.clear();
+    m_threadMessages.clear();
+    m_bodySynced = false;
+    Q_EMIT messageChanged();
+
     QJsonObject params;
     params.insert(QStringLiteral("account_id"), accountId);
     params.insert(QStringLiteral("message_id"), messageId);
