@@ -9,3 +9,6 @@ client_secret_*.json
 flatpak-build/
 flatpak-repo/
 *.flatpak
+.env
+.env.*
+!.env.example
